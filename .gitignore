@@ -1,0 +1,8 @@
+# Built from ../shirabe-sdk by `npm run build:anki`, never edited here.
+src/web/shirabe-card.js
+__pycache__/
+
+# Anki writes this per install (name, enabled, and the user's config). The
+# packaged add-on carries manifest.json instead; this one exists so a symlinked
+# dev install shows a name rather than a blank row.
+src/meta.json

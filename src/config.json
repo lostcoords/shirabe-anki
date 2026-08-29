@@ -1,0 +1,12 @@
+{
+  "enabled": true,
+  "trigger": "hover",
+  "apiBase": "https://shirabe.org",
+  "cardToken": "",
+  "useCollectionStates": true,
+  "definitionSize": "medium",
+  "theme": "system",
+  "reportUsage": true,
+  "installId": "",
+  "lastVersion": ""
+}

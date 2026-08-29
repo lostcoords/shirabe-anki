@@ -1,0 +1,9 @@
+{
+  "package": "shirabe",
+  "name": "Shirabe (shirabe.org)",
+  "mod": 0,
+  "conflicts": [],
+  "min_point_version": 240400,
+  "max_point_version": 0,
+  "homepage": "https://shirabe.org"
+}
