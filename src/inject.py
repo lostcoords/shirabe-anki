@@ -17,14 +17,30 @@ give a write to.
 from __future__ import annotations
 
 import json
+import time
 
 from . import template
 
 MARKER = "shirabe-card-attached"
 
 
-def attachment(config: dict, web_base: str) -> str:
+def account_state(config: dict, now_ms: float | None = None) -> str:
+    try:
+        slots = json.loads(config.get("cardToken") or "{}")
+        session = json.loads(slots.get("shirabe.link") or "{}")
+        if isinstance(session.get("access"), str) and session["access"]:
+            return "connected"
+        pending = json.loads(slots.get("shirabe.pending") or "{}")
+        if pending.get("expiresAt", 0) > (time.time() * 1000 if now_ms is None else now_ms):
+            return "waiting"
+    except (ValueError, TypeError, AttributeError):
+        pass
+    return "disconnected"
+
+
+def attachment(config: dict, web_base: str, sign_in: bool = False) -> str:
     settings = {
+        "signIn": sign_in,
         "trigger": config.get("trigger", "hover"),
         "apiBase": config.get("apiBase", "https://shirabe.org"),
         "clientId": template.CLIENT_ID,

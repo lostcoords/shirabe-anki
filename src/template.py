@@ -75,10 +75,9 @@ def block(api_base: str, client_id: str, trigger: str) -> str:
     it ourselves works whatever state the document is in, and `onload` is a
     signal that arrives either way.
 
-    Rendering a card runs this again, and so does flipping one over. `attach` is
-    idempotent per page (it re-reads instead of re-listening), and the flag is
-    what stops a second copy of the script being fetched before the first has
-    landed.
+    Rendering a card runs this again, and so does flipping one over. `attach`
+    replaces the previous attachment; the loading flag prevents duplicate
+    downloads while one is pending.
     """
     return f"""{OPEN}
 <script>
@@ -87,6 +86,7 @@ def block(api_base: str, client_id: str, trigger: str) -> str:
     // reader's token in Python and this block would be the weaker of the two.
     if (window.__shirabe) return;
     var open = function () {{
+      if (window.__shirabe) return;
       window.ShirabeCard.attach({{
         api: {{ apiBase: "{api_base}" }},
         link: {{ clientId: "{client_id}" }},
@@ -100,9 +100,14 @@ def block(api_base: str, client_id: str, trigger: str) -> str:
     window.__shirabeLoading = true;
     var script = document.createElement("script");
     script.src = "{bundle_url(api_base)}";
-    // No error branch on purpose: a phone with no signal renders the note as it
-    // always did, which is the right answer and not one worth a message.
-    script.onload = open;
+    script.onload = function () {{
+      window.__shirabeLoading = false;
+      open();
+    }};
+    script.onerror = function () {{
+      window.__shirabeLoading = false;
+      script.remove();
+    }};
     document.head.appendChild(script);
   }})();
 </script>

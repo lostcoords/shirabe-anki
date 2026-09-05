@@ -65,6 +65,7 @@ def hook_names() -> set[str]:
 # (`models.save` became `update_dict`), and every one is a crash the first time
 # a reader uses the feature rather than at load.
 RUNTIME = [
+    ("aqt.webview", "AnkiWebView", ["stdHtml", "cleanup"]),
     ("anki.models", "ModelManager", ["all", "update_dict"]),
     ("anki.collection", "Collection", ["build_search_string", "find_notes", "get_note"]),
     ("anki.cards", "Card", ["type", "ivl"]),

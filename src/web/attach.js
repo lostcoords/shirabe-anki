@@ -34,6 +34,7 @@
       clientId: settings.clientId,
       storage: bridged() ? addonStorage() : undefined,
     });
+    if (settings.signIn) return signInPanel(link);
     var host = ShirabeCard.apiHost({ apiBase: settings.apiBase, link: link });
 
     if (settings.useCollectionStates && bridged()) {
@@ -60,6 +61,22 @@
       // whatever it asks for. `attach` takes the write methods off the host.
       canWrite: false,
       options: { definitionSize: settings.definitionSize, theme: settings.theme },
+    });
+  }
+
+  function signInPanel(link) {
+    var panel = document.getElementById("shirabe-sign-in");
+    var retry = document.createElement("button");
+    retry.textContent = "Try again";
+    retry.onclick = function () { signInPanel(link); };
+    panel.textContent = "Starting sign-in…";
+    link.signIn(function (message) {
+      panel.replaceChildren(message);
+    }).then(function () {
+      panel.textContent = "Connected. You can close this window and return to your cards.";
+    }).catch(function (error) {
+      panel.textContent = error.message || "Couldn't connect. Please try again.";
+      panel.appendChild(retry);
     });
   }
 

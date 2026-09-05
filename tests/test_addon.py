@@ -6,11 +6,25 @@ collection, so both are testable here. The hooks themselves are not: they need
 """
 
 import unittest
+import json
 from pathlib import Path
 
 import support
 
 from shirabe_addon import collection, inject, net, template  # noqa: E402
+
+
+class AccountState(unittest.TestCase):
+    def test_pending_approval_is_not_a_connection(self):
+        config = {"cardToken": json.dumps({"shirabe.pending": json.dumps({"expiresAt": 2000})})}
+        self.assertEqual(inject.account_state(config, now_ms=1000), "waiting")
+        self.assertEqual(inject.account_state(config, now_ms=3000), "disconnected")
+
+    def test_only_a_real_session_is_connected(self):
+        for stored in ("", "{}", "broken", '{"shirabe.link":"{}"}'):
+            self.assertEqual(inject.account_state({"cardToken": stored}), "disconnected")
+        config = {"cardToken": json.dumps({"shirabe.link": json.dumps({"access": "live"})})}
+        self.assertEqual(inject.account_state(config), "connected")
 
 
 class Attachment(unittest.TestCase):
@@ -267,7 +281,7 @@ class ReachableFromAPhone(unittest.TestCase):
             self.assertFalse(template.reaches_a_phone(address), address)
 
     def test_a_real_host_does(self):
-        for address in ["https://shirabe.org", "https://stg.shirabe.org", "http://192.168.1.10:3000"]:
+        for address in ["https://shirabe.org", "https://www.shirabe.org", "http://192.168.1.10:3000"]:
             self.assertTrue(template.reaches_a_phone(address), address)
 
 

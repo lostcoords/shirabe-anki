@@ -12,6 +12,7 @@ the three controls they are.
 from __future__ import annotations
 
 from typing import Callable
+from .inject import account_state
 
 from aqt.qt import (
     QCheckBox,
@@ -54,6 +55,7 @@ class SettingsDialog(QDialog):
         config: dict,
         on_save: Callable[[dict], None],
         on_sign_out: Callable[[], None],
+        on_sign_in: Callable[[], None],
     ):
         super().__init__(parent)
         self.setWindowTitle("Shirabe")
@@ -61,6 +63,7 @@ class SettingsDialog(QDialog):
         self._config = config
         self._on_save = on_save
         self._on_sign_out = on_sign_out
+        self._on_sign_in = on_sign_in
 
         layout = QVBoxLayout(self)
         layout.addWidget(self._account_box())
@@ -74,29 +77,20 @@ class SettingsDialog(QDialog):
         buttons.rejected.connect(self.reject)
         layout.addWidget(buttons)
 
-    # ── Account ──────────────────────────────────────────────────────────────
-    # SIGNING IN HAPPENS ON THE CARD, because a phone has no window like this
-    # one and one way in beats two. Signing out is here, because the card is a
-    # dictionary popup and a sign-out button on every lookup would be clutter
-    # for something done twice a year.
-    #
-    # This can report the state honestly on a desktop: `inject.py` keeps the
-    # sign-in in the add-on's config, so it is a value this window can read. A
-    # phone keeps its own, which is why signing out here says "on this
-    # computer" rather than pretending to reach one.
-
     def _account_box(self) -> QFrame:
         box = QFrame()
         row = QVBoxLayout(box)
-        signed_in = bool(self._config.get("cardToken"))
+        state = account_state(self._config)
+        signed_in = state == "connected"
 
-        row.addWidget(QLabel("<b>Signed in</b>" if signed_in else "<b>Not signed in</b>"))
+        labels = {"connected": "Connected", "waiting": "Waiting for approval", "disconnected": "Not signed in"}
+        row.addWidget(QLabel(f"<b>{labels[state]}</b>"))
         detail = QLabel(
             "Signing out here covers this computer. To sign out everywhere, including "
             "phones, remove the device on your shirabe.org account page."
             if signed_in
-            else "Look up a word on a card, then use the Sign in link on it. Once you add "
-            "Shirabe to a note type and sync, the same sign-in works on your phone."
+            else "Connect this computer to Shirabe. Approve access in your browser, then return here. "
+            "Phones sign in separately; syncing a note type does not sync your login."
         )
         detail.setWordWrap(True)
         detail.setStyleSheet("color: palette(mid)")
@@ -109,7 +103,15 @@ class SettingsDialog(QDialog):
             buttons.addWidget(sign_out)
             buttons.addStretch(1)
             row.addLayout(buttons)
+        else:
+            sign_in = QPushButton("Continue sign-in" if state == "waiting" else "Sign in")
+            sign_in.clicked.connect(self._sign_in)
+            row.addWidget(sign_in)
         return box
+
+    def _sign_in(self) -> None:
+        self._save()
+        self._on_sign_in()
 
     def _sign_out(self) -> None:
         # The card reads what Python holds when it renders, so clearing it here

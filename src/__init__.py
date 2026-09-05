@@ -28,7 +28,8 @@ from __future__ import annotations
 import json
 
 from aqt import gui_hooks, mw
-from aqt.qt import QAction, QMenu
+from aqt.qt import QAction, QMenu, QDialog, QVBoxLayout, QDialogButtonBox
+from aqt.webview import AnkiWebView
 from aqt.utils import askUser, chooseList, showInfo, showWarning, tooltip
 
 from . import analytics, collection, inject, settings as settings_ui, template
@@ -119,8 +120,27 @@ def open_settings() -> None:
         config(),
         on_save=lambda values: (save_config(values), tooltip("Shirabe settings saved")),
         on_sign_out=sign_out,
+        on_sign_in=open_sign_in,
     )
     dialog.exec()
+
+
+def open_sign_in() -> None:
+    dialog = QDialog(mw)
+    dialog.setWindowTitle("Connect to Shirabe")
+    dialog.resize(480, 360)
+    layout = QVBoxLayout(dialog)
+    web = AnkiWebView(dialog)
+    layout.addWidget(web)
+    buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Close)
+    buttons.rejected.connect(dialog.reject)
+    layout.addWidget(buttons)
+    web.stdHtml('<main id="shirabe-sign-in" style="padding:24px"></main>' +
+                inject.attachment(config(), WEB_BASE, sign_in=True), context=dialog)
+    try:
+        dialog.exec()
+    finally:
+        web.cleanup()
 
 
 def _detail(raw: str) -> dict:

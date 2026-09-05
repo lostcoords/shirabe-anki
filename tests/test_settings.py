@@ -122,16 +122,17 @@ class SigningIn(unittest.TestCase):
         labels = re.findall(r'QAction\("([^"]+)"', source)
         self.assertFalse([label for label in labels if "onnect" in label], f"menu offers {labels}")
 
-    def test_the_window_sends_the_reader_to_the_card_to_sign_in(self):
+    def test_the_window_offers_the_shared_sign_in_flow(self):
         source = (SRC / "settings.py").read_text()
-        self.assertIn("use the Sign in link on it", source)
-        self.assertNotIn("Sign in", re.findall(r'QPushButton\("([^"]+)"', source))
+        self.assertIn("self._on_sign_in()", source)
+        self.assertIn("Sign in", source)
+        self.assertNotIn("use the Sign in link on it", source)
 
     def test_signing_out_is_here_because_the_card_is_the_wrong_place_for_it(self):
         # A dictionary popup with a sign-out button on it is clutter on every
         # lookup, for something done twice a year.
         source = (SRC / "settings.py").read_text()
-        self.assertEqual(re.findall(r'QPushButton\("([^"]+)"', source), ["Sign out on this computer"])
+        self.assertIn("Sign out on this computer", re.findall(r'QPushButton\("([^"]+)"', source))
         self.assertIn("cardToken", _assigned_keys(SRC / "__init__.py", "sign_out"))
 
 

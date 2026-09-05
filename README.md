@@ -40,27 +40,17 @@ disagree.
 
 ## Connecting an account
 
-**Tools → Shirabe → Connect account.** One way in: your browser opens, you
-approve, and it comes straight back. That is the loopback redirect that RFC 8252 recommends for native
-software. The add-on listens on 127.0.0.1 on a port the OS picks, for the few
-seconds the flow takes.
+Open **Tools → Shirabe → Settings → Sign in**. Follow the link in the connection
+window, approve access in your browser, and return to Anki. Keep the connection
+window open until it says Connected. If you closed it early, choose Continue
+sign-in in Settings to resume. A failed request offers Try again.
 
-That listener is reachable by anything else running on your machine, which is
-why the grant is bound to us by PKCE, and why the server requires it
-(`code_challenge_method=S256`, refused otherwise). A local process that raced us
-to the callback would hold a code it cannot spend. It is also why the callback
-carries a `state` we minted and answers 400 to anything without it.
+On a phone, start from the Sign in link in a word popup. Each device signs in
+separately; syncing a note type does not sync the desktop login.
 
-Where that cannot work (a browser on another machine, or something local
-refusing to let us listen) the add-on shows you a short code to approve instead,
-by itself. That is the device flow (RFC 8628), and it is a fallback rather than a
-second thing to choose: nobody can tell in advance which one their machine can
-do, so being asked is being made to guess.
-
-What is stored is the refresh token, and what reaches a rendered card is only the
-access token it was renewed into: short-lived by design, so a screenshot of a
-card is not a screenshot of your account. Revoking the link on your account page
-ends it everywhere, which removing it here does not.
+Both entry points use the SDK's read-only device flow. The executable checks are
+in [`link.test.ts`](../shirabe-sdk/test/link.test.ts) and
+[`desktop-storage.test.ts`](../shirabe-sdk/test/desktop-storage.test.ts).
 
 ## What it is made of
 
@@ -84,7 +74,6 @@ re-implementing that in Python would be a second lookup engine to keep honest.
 ```
 src/__init__.py     what Anki loads: hooks, menu, the JS bridge
 src/settings.py     the Settings window
-src/account.py      linking, by loopback redirect or device code
 src/collection.py   reading word states out of the user's own notes
 src/inject.py       the HTML rewrite that puts the card on a rendered card
 src/web/            the bundled card (built from ../../shirabe-sdk)
