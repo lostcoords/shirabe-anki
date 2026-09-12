@@ -1,25 +1,8 @@
-"""Putting Shirabe into a note type, so it works on a phone.
-
-The desktop add-on injects the card at render time and nothing needs to be in
-the note. AnkiDroid and AnkiMobile have no add-ons at all: the only thing that
-crosses the sync is the note type itself, so on a phone the card can only come
-from the TEMPLATE. That is what this writes.
-
-WHY IT EDITS THE READER'S OWN NOTE TYPE rather than shipping one. Nobody restarts
-their collection to try a dictionary popup: the decks people actually study came
-from somewhere else, with note types they have already styled. Handing them a new
-one means "re-make your deck first", which is not an offer. So the block goes
-into whichever note type they point at, between two markers, and comes out again
-without touching a line they wrote.
-
-The script is loaded from a versioned CDN path rather than bundled into the
-template, because a template is one string in a collection that syncs to every
-device: shipping 90KB of JavaScript through it would bloat every note and pin
-every phone to whatever we shipped that day.
-"""
+"""Marked template blocks and loaders for portable Anki cards."""
 
 from __future__ import annotations
 
+import json
 import re
 from urllib.parse import urlsplit
 
@@ -46,14 +29,6 @@ def bundle_url(api_base: str) -> str:
     base = api_base.rstrip("/")
     return CDN if base == PRODUCTION else base + BUNDLE_PATH
 
-# Who the card says it is when it signs in, on a phone and on the desktop alike.
-#
-# READ-ONLY BY DESIGN, and the server enforces it: asked for a write scope, it
-# grants `READ_DICTIONARY READ_SRS` and nothing more. The card keeps its token
-# where the page can reach it, because on a phone there is nowhere else, and a
-# webview is shared with every deck in the collection. So the token is worth
-# nothing to steal: it reads a dictionary that is public and a word list that is
-# the reader's own.
 CLIENT_ID = "shirabe-anki-card"
 
 OPEN = "<!-- shirabe:start -->"
@@ -65,7 +40,12 @@ CLOSE = "<!-- shirabe:end -->"
 BLOCK = re.compile(re.escape(OPEN) + ".*?" + re.escape(CLOSE) + r"\n?", re.DOTALL)
 
 
-def block(api_base: str, client_id: str, trigger: str) -> str:
+def script_json(value: object) -> str:
+    return json.dumps(value, ensure_ascii=True).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
+
+
+def block(api_base: str, client_id: str, trigger: str, online_parsing: bool = False,
+          assets: dict[str, str] | None = None, snapshot_field: bool = False) -> str:
     """The lines that turn a rendered note into a reading surface.
 
     THE SCRIPT IS LOADED BY HAND, not with a `src` tag and not on
@@ -79,19 +59,21 @@ def block(api_base: str, client_id: str, trigger: str) -> str:
     replaces the previous attachment; the loading flag prevents duplicate
     downloads while one is pending.
     """
+    if assets is not None:
+        return portable_block(api_base, client_id, trigger, online_parsing, assets, snapshot_field)
     return f"""{OPEN}
 <script>
   (function () {{
     // The desktop add-on injects its own copy and sets this. There, it has the
     // reader's token in Python and this block would be the weaker of the two.
-    if (window.__shirabe) return;
+    if (window.__shirabe || window.__shirabeNativeRender) return;
     var open = function () {{
-      if (window.__shirabe) return;
+      if (window.__shirabe || window.__shirabeNativeRender) return;
       window.ShirabeCard.attach({{
-        api: {{ apiBase: "{api_base}" }},
-        link: {{ clientId: "{client_id}" }},
-        parse: true,
-        trigger: "{trigger}",
+        api: {{ apiBase: {script_json(api_base)} }},
+        link: {{ clientId: {script_json(client_id)}, scope: "READ_DICTIONARY READ_SRS READ_ACCOUNT" }},
+        parse: {script_json(online_parsing is True)},
+        trigger: {script_json(trigger)},
         canWrite: false
       }});
     }};
@@ -99,7 +81,7 @@ def block(api_base: str, client_id: str, trigger: str) -> str:
     if (window.__shirabeLoading) return;
     window.__shirabeLoading = true;
     var script = document.createElement("script");
-    script.src = "{bundle_url(api_base)}";
+    script.src = {script_json(bundle_url(api_base))};
     script.onload = function () {{
       window.__shirabeLoading = false;
       open();
@@ -112,6 +94,59 @@ def block(api_base: str, client_id: str, trigger: str) -> str:
   }})();
 </script>
 {CLOSE}"""
+
+
+def portable_block(api_base: str, client_id: str, trigger: str, online_parsing: bool,
+                   assets: dict[str, str], snapshot_field: bool = False) -> str:
+    settings = {
+        "apiBase": api_base,
+        "clientId": client_id,
+        "trigger": trigger,
+        "onlineParsing": online_parsing is True,
+        "native": False,
+        "bundle": assets["shirabe-card.js"],
+        "canWrite": False,
+    }
+    reference = '<span hidden data-shirabe-snapshot>{{text:ShirabeLookup}}</span>' if snapshot_field else ""
+    return f"""{OPEN}
+{reference}
+<script>
+(function () {{
+  if (window.__shirabe || window.__shirabeNativeRender) return;
+  var settings = {script_json(settings)};
+  var generation = {{}};
+  window.__shirabePhone = generation;
+  function open() {{
+    if (window.__shirabe || window.__shirabeNativeRender || window.__shirabePhone !== generation) return;
+    window.ShirabeAnki.open(settings);
+  }}
+  if (window.ShirabeAnki) return open();
+  var script = document.createElement("script");
+  script.src = {script_json(assets['attach.js'])};
+  script.onload = open;
+  script.onerror = function () {{
+    script.remove();
+    if (window.__shirabePhone !== generation) return;
+    var message = document.createElement("p");
+    message.setAttribute("role", "status");
+    message.textContent = "Shirabe files are missing. Finish syncing media, then reopen this card.";
+    (document.getElementById("qa") || document.body).appendChild(message);
+  }};
+  document.head.appendChild(script);
+}})();
+</script>
+{CLOSE}"""
+
+
+QUESTION_OPEN = "<!-- shirabe:question -->"
+QUESTION_CLOSE = "<!-- shirabe:question-end -->"
+QUESTION_BLOCK = re.compile(re.escape(QUESTION_OPEN) + ".*?" + re.escape(QUESTION_CLOSE) + r"\n?", re.DOTALL)
+DETACH = '<script>window.__shirabePhone = null; if (window.ShirabeAnki) window.ShirabeAnki.detach(); window.__shirabe = null;</script>'
+
+
+def with_question_guard(value: str) -> str:
+    clean = QUESTION_BLOCK.sub("", value).rstrip()
+    return clean + "\n" + QUESTION_OPEN + DETACH + QUESTION_CLOSE + "\n"
 
 
 # A phone reaching "localhost" reaches the phone. `.localhost` is the same
@@ -131,13 +166,14 @@ def reaches_a_phone(api_base: str) -> bool:
     return host not in LOOPBACK and not host.endswith(".localhost")
 
 
-def with_block(template: str, api_base: str, client_id: str, trigger: str) -> str:
+def with_block(template: str, api_base: str, client_id: str, trigger: str, online_parsing: bool = False,
+               assets: dict[str, str] | None = None, snapshot_field: bool = False) -> str:
     """Add the block, or replace the one already there.
 
     Replacing rather than appending is what makes the menu item safe to run
     twice, and what upgrades a template written by an older version.
     """
-    fresh = block(api_base, client_id, trigger)
+    fresh = block(api_base, client_id, trigger, online_parsing, assets, snapshot_field)
     if BLOCK.search(template):
         return BLOCK.sub(lambda _: fresh, template, count=1)
     return template.rstrip() + "\n\n" + fresh + "\n"
@@ -145,7 +181,7 @@ def with_block(template: str, api_base: str, client_id: str, trigger: str) -> st
 
 def without_block(template: str) -> str:
     """Take it back out, leaving the reader's own template exactly as it was."""
-    return BLOCK.sub("", template).rstrip() + "\n"
+    return QUESTION_BLOCK.sub("", BLOCK.sub("", template)).rstrip() + "\n"
 
 
 def installed(template: str) -> bool:

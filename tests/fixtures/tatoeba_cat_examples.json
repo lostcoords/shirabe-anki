@@ -1,0 +1,54 @@
+{
+  "provenance": {
+    "retrieved_on": "2026-09-13",
+    "scope": "Two unchanged public Tatoeba sentence/translation pairs, mapped into the Shirabe sentence contract. Not a captured Shirabe API response or a linguistic-quality benchmark.",
+    "license": "CC BY 2.0 FR",
+    "license_url": "https://creativecommons.org/licenses/by/2.0/fr/",
+    "reuse_guidance_url": "https://en.wiki.tatoeba.org/articles/show/faq#i-would-like-to-use-tatoeba's-data-for-my-project.",
+    "pairs": [
+      {
+        "api_url": "https://api.tatoeba.org/v1/sentences/10098762?showtrans:lang=eng",
+        "japanese_url": "https://tatoeba.org/en/sentences/show/10098762",
+        "japanese_owner": "bunbuku",
+        "translation_url": "https://tatoeba.org/en/sentences/show/9737231",
+        "translation_owner": "CK",
+        "is_direct": true
+      },
+      {
+        "api_url": "https://api.tatoeba.org/v1/sentences/9032775?showtrans:lang=eng",
+        "japanese_url": "https://tatoeba.org/en/sentences/show/9032775",
+        "japanese_owner": "small_snow",
+        "translation_url": "https://tatoeba.org/en/sentences/show/8755684",
+        "translation_owner": "shekitten",
+        "is_direct": true
+      }
+    ]
+  },
+  "corpus": {
+    "slug": "tatoeba",
+    "name": "Tatoeba",
+    "type": "sentence",
+    "visibility": "official",
+    "source": {
+      "name": "Tatoeba",
+      "url": "https://tatoeba.org",
+      "license": "CC BY 2.0 FR",
+      "licenseUrl": "https://creativecommons.org/licenses/by/2.0/fr/"
+    }
+  },
+  "response": {
+    "sentences": [
+      {
+        "id": "tatoeba:tatoeba_10098762",
+        "japanese": "イスの上に猫が座ってるよ。",
+        "translations": [{"lang": "en", "text": "There's a cat sitting on the chair."}]
+      },
+      {
+        "id": "tatoeba:tatoeba_9032775",
+        "japanese": "猫が眠ってるよ。",
+        "translations": [{"lang": "en", "text": "The cat is asleep."}]
+      }
+    ],
+    "pagination": {"hasMore": false, "cursor": null}
+  }
+}

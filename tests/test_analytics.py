@@ -77,7 +77,8 @@ class NeverRaises(unittest.TestCase):
             analytics._post({"api_key": "x", "batch": []})  # must not raise
 
     def test_a_platform_lookup_outside_anki_degrades_instead_of_failing(self):
-        found = analytics._platform()
+        with mock.patch.dict(sys.modules, {"anki.buildinfo": None, "aqt.qt": None}):
+            found = analytics._platform()
         self.assertIn("os", found)
         self.assertNotIn("anki_version", found, "there is no Anki here to ask")
 

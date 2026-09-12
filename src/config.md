@@ -1,42 +1,35 @@
-## Shirabe
+## Shirabe settings
 
-**enabled**: whether the popup goes on cards at all. Also on the toolbar, at
-**Tools → Shirabe → Popup on cards**, because it is the one switch worth
-reaching without opening a window. Off leaves your cards exactly as their author
-wrote them: no scripts, no lookups, no spans.
+Use **Tools → Shirabe → Settings** instead of editing login data here.
 
-**trigger**: what opens the card. `hover`, `click`, or `shift` / `alt` / `ctrl` /
-`meta` for hover with that key held, which is what the browser extension does and
-what keeps a card from appearing under a pointer that is only passing through. A
-tap always works on a phone, whichever of these is set.
+- `enabled`: show the Desktop popup on cards. Default: `true`.
+- `trigger`: `click` by default; also `hover`, `shift`, `alt`, `ctrl`, or `meta`.
+  Touch uses a tap.
+- `answerOnly`: enable lookup after showing the answer. Default: `true`.
+- `onlineParsing`: send visible Japanese text for word boundaries and study
+  colours. Default: `false`. With this off, an explicit lookup sends the chosen
+  word and nearby text unless a prepared offline result answers it.
+- `useCollectionStates`: use mapped Anki expression fields for study colours.
+  Default: `true`. Unmapped notes do not imply that a word is being studied.
+- `definitionSize`: `small`, `medium`, or `large`. Default: `medium`.
+- `theme`: `system`, `light`, or `dark`. Default: `system`.
+- `apiBase`: the dictionary server, under **Advanced → Server**.
+- `reportUsage`: send software events and Anki, Qt, and operating-system
+  versions, without lookup text. Default: `true`.
+- `offlineStorageMiB`: the collection's prepared snapshot limit. Default:
+  `25`; adjustable in the offline preparation dialog.
 
-Sign in from a card, not from here: look up a word and use the **Sign in** link
-on it. Add Shirabe to a note type (**Tools → Shirabe → Add to a note type**) and
-sync, and you can sign in the same way on your phone.
+Note-type side and parsing choices override the corresponding Desktop defaults.
+Use **Add to a note type (for phones)…** to change those choices or exclude fields.
 
-Sign out in the settings window. That covers this computer; to sign out
-everywhere, including phones, remove the device on your shirabe.org account
-page.
+Use **Note fields, deck and tags…** to maintain reusable authoring profiles.
+Profiles map fields; they do not grant card scripts permission to write notes.
+The native editor or a field-change confirmation remains required.
 
-Looking words up needs a free account. Saving to Shirabe is not offered on a
-card: an Anki card keeps its sign-in where the page can read it, because on a
-phone there is nowhere else, so it signs in as a client that can only read.
+`cardToken` contains the device's read-only login and pending authorization.
+Sign-in writes it; sign-out clears it. It must not be copied into a note,
+template, support report, or shared add-on package. Other scripts in a trusted
+card's WebView can read it, including access to private uploaded dictionaries.
 
-**useCollectionStates**: colour a word by whether YOUR collection already has a
-note for it, rather than by your Shirabe account. On by default, because in Anki
-your own deck is the better answer to "do I know this word".
-
-**definitionSize**: `small`, `medium`, or `large`. Large is worth it if you read
-monolingual definitions.
-
-**theme**: `system`, `light`, or `dark`, for the popup itself.
-
-**apiBase**: under **Advanced** in the window. The Shirabe server to use, for
-testing against your own.
-
-**cardToken**: written by signing in and cleared by signing out; never typed.
-It is here rather than in the browser's storage because Anki serves its webviews
-from a port it picks fresh on every launch, and browser storage belongs to an
-origin: kept there, your sign-in would not survive closing Anki. It is a
-read-only credential: the client it belongs to is refused a write by the server
-however it asks, which is what makes it safe to keep where a card can read it.
+Prepared excerpts are separate collection media, not login data. They may travel
+with deck exports and remain after sign-out. Review their licenses before sharing.

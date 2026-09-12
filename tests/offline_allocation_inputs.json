@@ -1,0 +1,8 @@
+{
+  "corpus": {"path": "../shirabe-tokenizer-benchmark/data/corpora/botchan-web.json", "bytes": 6705399, "sha256": "54ee10bae43c93609b62188128fdd2e35e37d4eb93b953ecf108a95263fd6689"},
+  "capture": {"path": "tmp/anki-full-corpus.fSGAjI/botchan-baseline.jsonl", "bytes": 49571153, "sha256": "a59f8545ac8c01cda1e2b28d5bb844bcd36c419928ca246e29a7fa061dd7e141"},
+  "baseline": {"path": "tmp/anki-full-corpus.fSGAjI/botchan-baseline.json", "bytes": 944803, "sha256": "b04b1aacbe2d6f85b2df286ce67a5a3c59b4e01c33d8faebf4d230b4be5dbad0"},
+  "prototype_report": {"path": "tmp/anki-coverage.vEp0Ff/full.json", "bytes": 351181, "sha256": "aadbfa75058c11987e12b4470710178e760b51c144a4f7750fe03d9c90242e3f"},
+  "prototype_code": {"path": "tmp/anki-coverage.vEp0Ff/coverage.py", "bytes": 26158, "sha256": "94b49bdd44d574f40503002595a81a2c7c3594c3bb3bf2cfcdaf09053e2eb1d7"},
+  "sdk_bundle": {"path": "anki-addon/src/web/shirabe-card.js", "bytes": 153841, "sha256": "ac17613f33cc36d7186102ffa6fd39e45c58b1b2491c1bf08f3ef7909e243fe0"}
+}

@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
-"""Every test that needs no Anki, which is all of them.
-
-The add-on's own halves (injection, collection reading, linking) are testable
-here; the three Anki hooks are not, because a test that imports `aqt` is a test
-that needs a GUI.
-"""
+"""Run add-on tests; use Anki's Python to include collection and Qt checks."""
 
 import sys
 import unittest

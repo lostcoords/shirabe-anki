@@ -1,59 +1,98 @@
-"""Answering "do I know this word" from the reader's own collection.
-
-This is the part no other surface can do. The browser extension and Nadeshiko
-ask Shirabe what you know, because a Shirabe account is the only thing they can
-see. An add-on is inside Anki, so it can answer from the deck you actually
-study, which for an Anki user is the better answer and needs no account at all.
-
-The mapping is deliberately crude, and it should stay crude until someone shows
-it is not enough: a word is "known" if any note contains it in a field, with a
-card that is not new. Anki has no notion of which word a note is ABOUT, so
-anything cleverer would be us guessing at their note types.
-"""
+"""Mapped note identities and collection study states, without an account."""
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from dataclasses import dataclass
 
-if TYPE_CHECKING:  # pragma: no cover
-    from anki.collection import Collection
+from .authoring import AuthoringError, FieldProfile, Lookup, escaped_text, identity_text
 
-# Anki's own card queue/type numbers (see anki/consts.py). A card that has never
-# been studied is `new`; anything else has been seen at least once.
 CARD_TYPE_NEW = 0
 
 
-def states_for(col: "Collection", words: list[str]) -> dict[str, str]:
-    """`{word: state}` for the card, using only what the collection knows.
+@dataclass(frozen=True)
+class ExistingNote:
+    note_id: int
+    note_type_id: int
+    expression: str
+    reading: str
+    entry: str
+    match: str
 
-    States are the card's own vocabulary: `none` (no note), `new` (a note exists
-    but has never been studied), `learning` (studied, not yet mature) and
-    `retired` (mature). `due` is deliberately not returned: whether a card is due
-    is a scheduling fact that Anki already shows you, and colouring a word by it
-    would compete with Anki's own queue rather than tell you something new.
-    """
-    out: dict[str, str] = {}
-    for word in words:
-        out[word] = _state_for(col, word)
+
+def _matching_ids(col, profile: FieldProfile, value: str):
+    from anki.collection import SearchNode
+
+    # A field search anchors the text and misses ruby readings. Search literally,
+    # then compare only the mapped identity fields on each candidate below.
+    # Anki searches stored field HTML, including entity-escaped punctuation.
+    terms = [SearchNode(literal_text=text) for text in sorted({value, escaped_text(value)})]
+    query = col.build_search_string(*terms, joiner="OR")
+    return col.find_notes(col.build_search_string(f"mid:{profile.note_type_id}", query))
+
+
+def find_existing_notes(col, lookup: Lookup, profiles: list[FieldProfile], *, limit: int = 100) -> list[ExistingNote]:
+    """Return candidates, never merge. A spelling-only match remains ambiguous."""
+    if not 1 <= limit <= 500:
+        raise ValueError("Duplicate result limit must be between 1 and 500.")
+    found = {}
+    for profile in profiles:
+        try:
+            profile.validate(col.models.get(profile.note_type_id))
+        except AuthoringError:
+            continue
+        candidates = set()
+        if lookup.entry and "entry" in profile.fields:
+            candidates.update(_matching_ids(col, profile, lookup.entry))
+        if "expression" in profile.fields:
+            for expression in {lookup.lemma, lookup.surface} - {""}:
+                candidates.update(_matching_ids(col, profile, expression))
+        for nid in sorted(candidates):
+            note = col.get_note(nid)
+            values = {role: identity_text(note[name], reading=role == "reading", entry=role == "entry") for role, name in profile.fields.items()}
+            expression, reading, entry = (values.get(role, "") for role in ("expression", "reading", "entry"))
+            same_reading = bool(reading and lookup.reading and reading == identity_text(lookup.reading, reading=True))
+            if entry and lookup.entry:
+                if entry != lookup.entry:
+                    continue
+                match = "entry-reading" if same_reading else "entry"
+            elif expression and expression in {identity_text(lookup.lemma), identity_text(lookup.surface)}:
+                match = "expression-reading" if same_reading else "expression"
+            else:
+                continue
+            result = ExistingNote(nid, note.mid, expression, reading, entry, match)
+            if nid not in found or _rank(result) < _rank(found[nid]):
+                found[nid] = result
+    return sorted(found.values(), key=lambda n: (_rank(n), n.note_id))[:limit]
+
+
+def _rank(note: ExistingNote) -> int:
+    return ("entry-reading", "entry", "expression-reading", "expression").index(note.match)
+
+
+def states_for(col, words: list[str], profiles: list[FieldProfile] | None = None, *, allow_heuristic: bool = False) -> dict[str, str]:
+    """Mapped expression states. The optional whole-text heuristic is opt-in."""
+    out = {}
+    for word in dict.fromkeys(words):
+        if not word.strip():
+            out[word] = "none"
+            continue
+        matches = find_existing_notes(col, Lookup(surface=word, lemma=word), profiles or [])
+        ids = {match.note_id for match in matches if match.expression == identity_text(word)}
+        if allow_heuristic:
+            mapped_types = {profile.note_type_id for profile in profiles or []}
+            for nid in col.find_notes(col.build_search_string(word)):
+                if not mapped_types or col.get_note(nid).mid not in mapped_types:
+                    ids.add(nid)
+        out[word] = _state_for_notes(col, ids)
     return out
 
 
-def _state_for(col: "Collection", word: str) -> str:
-    # `search_notes` is quoted through Anki's own escaping: a word can contain
-    # characters its search syntax reads (`*`, `_`, `:`), and a hand-built query
-    # would either fail or match the wrong notes.
-    query = col.build_search_string(word)
-    note_ids = col.find_notes(query)
-    if not note_ids:
+def _state_for_notes(col, note_ids) -> str:
+    cards = [card for nid in note_ids for card in col.get_note(nid).cards()]
+    if not cards:
         return "none"
 
-    intervals = []
-    for note_id in note_ids:
-        for card in col.get_note(note_id).cards():
-            if card.type == CARD_TYPE_NEW:
-                continue
-            intervals.append(card.ivl)
+    intervals = [card.ivl for card in cards if card.type != CARD_TYPE_NEW]
     if not intervals:
         return "new"
-    # Anki calls a card mature at 21 days, and so does its own statistics.
     return "retired" if max(intervals) >= 21 else "learning"

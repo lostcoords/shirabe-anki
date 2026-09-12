@@ -22,11 +22,12 @@ from aqt.qt import (
     QFormLayout,
     QFrame,
     QGroupBox,
-    QHBoxLayout,
     QLabel,
     QLineEdit,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
+    QWidget,
     Qt,
 )
 
@@ -56,26 +57,45 @@ class SettingsDialog(QDialog):
         on_save: Callable[[dict], None],
         on_sign_out: Callable[[], None],
         on_sign_in: Callable[[], None],
+        on_note_settings: Callable[[], None] | None = None,
+        on_study_sync: Callable[[], None] | None = None,
     ):
         super().__init__(parent)
         self.setWindowTitle("Shirabe")
-        self.setMinimumWidth(460)
         self._config = config
         self._on_save = on_save
         self._on_sign_out = on_sign_out
         self._on_sign_in = on_sign_in
 
-        layout = QVBoxLayout(self)
+        outer = QVBoxLayout(self)
+        content = QScrollArea()
+        content.setWidgetResizable(True)
+        content.setFrameShape(QFrame.Shape.NoFrame)
+        body = QWidget()
+        layout = QVBoxLayout(body)
+        layout.setContentsMargins(0, 0, 0, 0)
+        content.setWidget(body)
+        outer.addWidget(content)
         layout.addWidget(self._account_box())
         layout.addWidget(_rule())
         layout.addLayout(self._preferences())
+        if on_note_settings:
+            note_settings = QPushButton("Note fields, deck and tags…")
+            note_settings.clicked.connect(lambda: (self._save(), on_note_settings()))
+            layout.addWidget(note_settings)
+        if on_study_sync:
+            study_sync = QPushButton("Study sync…")
+            study_sync.clicked.connect(lambda: (self._save(), on_study_sync()))
+            layout.addWidget(study_sync)
         layout.addWidget(self._advanced())
         layout.addStretch(1)
 
         buttons = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
         buttons.accepted.connect(self._save)
         buttons.rejected.connect(self.reject)
-        layout.addWidget(buttons)
+        outer.addWidget(buttons)
+        available = self.screen().availableGeometry()
+        self.resize(min(680, available.width() - 40), min(700, available.height() - 40))
 
     def _account_box(self) -> QFrame:
         box = QFrame()
@@ -90,18 +110,22 @@ class SettingsDialog(QDialog):
             "phones, remove the device on your shirabe.org account page."
             if signed_in
             else "Connect this computer to Shirabe. Approve access in your browser, then return here. "
-            "Phones sign in separately; syncing a note type does not sync your login."
+            "Phones sign in separately; syncing a note type does not sync your login. "
+            "Read-only access includes your dictionary preferences and uploaded dictionaries. "
+            "Only use card templates you trust; scripts in other decks can read a card's login."
         )
         detail.setWordWrap(True)
-        detail.setStyleSheet("color: palette(mid)")
         row.addWidget(detail)
 
         if signed_in:
-            buttons = QHBoxLayout()
+            buttons = QVBoxLayout()
+            reconnect = QPushButton("Reconnect…")
+            reconnect.setToolTip("Approve access again if a session expired or new dictionary permissions are needed.")
+            reconnect.clicked.connect(self._sign_in)
+            buttons.addWidget(reconnect)
             sign_out = QPushButton("Sign out on this computer")
             sign_out.clicked.connect(self._sign_out)
             buttons.addWidget(sign_out)
-            buttons.addStretch(1)
             row.addLayout(buttons)
         else:
             sign_in = QPushButton("Continue sign-in" if state == "waiting" else "Sign in")
@@ -128,20 +152,33 @@ class SettingsDialog(QDialog):
         self.enabled = QCheckBox("Show the popup on cards")
         self.enabled.setChecked(bool(self._config.get("enabled", True)))
         self.enabled.setToolTip("Off leaves your cards exactly as they were: no scripts, no lookups.")
-        form.addRow("", self.enabled)
+        form.addRow(self.enabled)
 
-        self.trigger = _choice(TRIGGERS, self._config.get("trigger", "hover"))
-        form.addRow("Open the card by", self.trigger)
+        self.trigger = _choice(TRIGGERS, self._config.get("trigger", "click"))
+        form.addRow("Open the popup by", self.trigger)
 
-        self.collection_states = QCheckBox("Colour words using my own Anki notes")
+        self.answer_only = QCheckBox("Only after revealing the answer")
+        self.answer_only.setChecked(bool(self._config.get("answerOnly", True)))
+        self.answer_only.setToolTip("Keep definitions off the question side while you recall the answer.")
+        form.addRow(self.answer_only)
+
+        self.online_parsing = QCheckBox("Identify visible Japanese online")
+        self.online_parsing.setChecked(self._config.get("onlineParsing") is True)
+        self.online_parsing.setToolTip(
+            "Sends visible card text to Shirabe for word boundaries and study colours.\n"
+            "When off, only a word you choose and nearby text are sent for lookup."
+        )
+        form.addRow(self.online_parsing)
+
+        self.collection_states = QCheckBox("Use Anki notes for word colours")
         self.collection_states.setChecked(bool(self._config.get("useCollectionStates", True)))
         self.collection_states.setToolTip(
-            "On: a word is coloured by whether this collection already has a note for it.\n"
+            "On: match words against the expression fields mapped in Note fields, deck and tags.\n"
             "Off: by what your Shirabe account knows."
         )
-        form.addRow("", self.collection_states)
+        form.addRow(self.collection_states)
 
-        self.report_usage = QCheckBox("Send anonymous crash and usage reports")
+        self.report_usage = QCheckBox("Send anonymous reports")
         self.report_usage.setChecked(bool(self._config.get("reportUsage", True)))
         self.report_usage.setToolTip(
             "What is sent: that a card opened or a save failed, plus your Anki, Qt and\n"
@@ -149,7 +186,7 @@ class SettingsDialog(QDialog):
             "particular Anki. What is never sent: a word, a note, a deck, or anything\n"
             "identifying you."
         )
-        form.addRow("", self.report_usage)
+        form.addRow(self.report_usage)
 
         self.definition_size = _choice(DEFINITION_SIZES, self._config.get("definitionSize", "medium"))
         form.addRow("Definition size", self.definition_size)
@@ -166,17 +203,23 @@ class SettingsDialog(QDialog):
     def _advanced(self) -> QGroupBox:
         box = QGroupBox("Advanced")
         box.setCheckable(True)
-        # Open only when it already holds something other than the default, so a
-        # dev pointing at their own server sees why it is behaving differently.
+        box.setStyleSheet("QGroupBox { border: none; }")
         box.setChecked(self._config.get("apiBase") not in (None, "", DEFAULT_API_BASE))
-        box.toggled.connect(lambda shown: [w.setVisible(shown) for w in box.findChildren(QFrame) + [inner]])
-
-        inner = QFormLayout()
+        body = QWidget()
+        inner = QFormLayout(body)
+        inner.setRowWrapPolicy(QFormLayout.RowWrapPolicy.WrapLongRows)
         self.api_base = QLineEdit(self._config.get("apiBase", DEFAULT_API_BASE))
         self.api_base.setPlaceholderText(DEFAULT_API_BASE)
         self.api_base.setToolTip("The Shirabe server to look words up on. Change this to test against your own.")
         inner.addRow("Server", self.api_base)
-        box.setLayout(inner)
+        outer = QVBoxLayout(box)
+        outer.addWidget(body)
+        def show_body(expanded):
+            body.setVisible(expanded)
+            top = box.fontMetrics().height() + 6 if expanded else 0
+            outer.setContentsMargins(0, top, 0, 0)
+        show_body(box.isChecked())
+        box.toggled.connect(show_body)
         return box
 
     def _save(self) -> None:
@@ -184,6 +227,8 @@ class SettingsDialog(QDialog):
             **self._config,
             "enabled": self.enabled.isChecked(),
             "trigger": self.trigger.currentData(),
+            "answerOnly": self.answer_only.isChecked(),
+            "onlineParsing": self.online_parsing.isChecked(),
             "useCollectionStates": self.collection_states.isChecked(),
             "reportUsage": self.report_usage.isChecked(),
             "definitionSize": self.definition_size.currentData(),
@@ -195,6 +240,8 @@ class SettingsDialog(QDialog):
 
 def _choice(options: list[tuple[str, str]], current: str) -> QComboBox:
     box = QComboBox()
+    box.setMinimumContentsLength(10)
+    box.setSizeAdjustPolicy(QComboBox.SizeAdjustPolicy.AdjustToMinimumContentsLengthWithIcon)
     for label, value in options:
         box.addItem(label, value)
     index = box.findData(current)

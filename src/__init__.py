@@ -1,7 +1,7 @@
 """Shirabe for Anki: the dictionary card, on every card you review.
 
 What this file is: the seams Anki gives an add-on, and nothing else. The card is
-`shirabe-sdk`, bundled into `web/`; the reader's own words come from
+`packages/card`, bundled into `web/`; the reader's own words come from
 `collection.py`; the HTML rewrite is `inject.py`; the note type a phone reads is
 `template.py`.
 
@@ -26,13 +26,15 @@ card into a note type, which syncs.
 from __future__ import annotations
 
 import json
+from pathlib import Path
 
+from anki.hooks import wrap
 from aqt import gui_hooks, mw
-from aqt.qt import QAction, QMenu, QDialog, QVBoxLayout, QDialogButtonBox
+from aqt.qt import QAction, QMenu, QDialog, QVBoxLayout, QDialogButtonBox, QTimer
 from aqt.webview import AnkiWebView
-from aqt.utils import askUser, chooseList, showInfo, showWarning, tooltip
+from aqt.utils import showInfo, showWarning, tooltip
 
-from . import analytics, collection, inject, settings as settings_ui, template
+from . import analytics, bridge, collection, inject, offline, settings as settings_ui, template
 
 ADDON = mw.addonManager.addonFromModule(__name__)
 # Only what the webview must fetch. A pattern wider than this would publish the
@@ -49,6 +51,7 @@ BRIDGE_PREFIX = "shirabe:"
 # the bridge is reachable from any JavaScript on a rendered card, including a
 # shared deck's own.
 REPORTABLE = {"card_opened", "card_missing", "lookup_failed", "word_saved", "word_known", "save_refused"}
+AUTHORING_GATE = bridge.ProposalGate()
 
 
 def config() -> dict:
@@ -56,6 +59,9 @@ def config() -> dict:
 
 
 def save_config(values: dict) -> None:
+    previous = config()
+    if any(previous.get(key, default) != values.get(key, default) for key, default in (("cardToken", ""), ("apiBase", "https://shirabe.org"))):
+        offline.invalidate_preparations()
     mw.addonManager.writeConfig(__name__, values)
 
 
@@ -63,7 +69,11 @@ def on_card_will_show(html: str, card, kind: str) -> str:
     # Previews and the card layout screen render through here too. They are worth
     # including: someone editing a note type is exactly who wants to see what the
     # card will look like.
-    return inject.with_card(html, config(), WEB_BASE)
+    values = inject.card_settings(config(), card)
+    note = card.note()
+    if "ShirabeLookup" in note:
+        values["snapshot"] = offline.snapshot_filename(note["ShirabeLookup"])
+    return '<script>window.__shirabeNativeRender = true;</script>' + template.DETACH + inject.with_card(html, values, WEB_BASE, kind=kind)
 
 
 def on_js_message(handled: tuple[bool, object], message: str, context: object) -> tuple[bool, object]:
@@ -78,34 +88,109 @@ def on_js_message(handled: tuple[bool, object], message: str, context: object) -
         return handled
 
     command, _, payload = message[len(BRIDGE_PREFIX):].partition(":")
+    if command == "author":
+        return (True, request_authoring(payload, context))
     if command == "report":
         # The card reports through Python rather than posting for itself: one
         # sender, and one place the reader's opt-out is honoured.
         event, _, detail = payload.partition(":")
         if event in REPORTABLE:
-            analytics.capture(config(), event, _detail(detail), on_config_change=save_config)
+            analytics.capture(config(), event, bridge.report_details(detail), on_config_change=save_config)
         return (True, "")
     if command == "store":
         # The card's sign-in, kept where a changing port cannot orphan it. See
         # `inject.py` for why the browser's own storage will not do.
-        save_config({**config(), "cardToken": payload})
+        try:
+            stored = bridge.session_slots(payload)
+        except bridge.BridgeError:
+            return (True, "")
+        save_config({**config(), "cardToken": stored})
         return (True, "")
     if command == "states":
+        from .authoring import profiles_from_config
+
         if not config().get("useCollectionStates", True):
             return (True, json.dumps({}))
-        words = [word for word in payload.split(" ") if word]
-        return (True, json.dumps(collection.states_for(mw.col, words)))
+        if len(payload) > 32768 or mw.col is None:
+            return (True, json.dumps({}))
+        words = list(dict.fromkeys(word for word in payload.split(" ") if 0 < len(word) <= 256))[:128]
+        return (True, json.dumps(collection.states_for(mw.col, words, profiles_from_config(config()))))
     return handled
 
 
 def sign_out() -> None:
-    """Forget the card's sign-in on this computer.
-
-    The card reads what Python holds when it renders, so this is the whole of
-    it: the next card comes up signed out and offers the sign-in again.
-    """
+    """Clear this computer's sign-in and active popup sessions."""
     save_config({**config(), "cardToken": ""})
+    for web in mw.findChildren(AnkiWebView):
+        web.eval("if (window.ShirabeAnki) window.ShirabeAnki.signOut();")
     tooltip("Signed out of Shirabe on this computer.")
+
+
+def context_card(context):
+    from aqt.reviewer import Reviewer
+    from aqt.browser.previewer import Previewer
+
+    if isinstance(context, Reviewer):
+        if context.card is None:
+            return None
+        if inject.card_settings(config(), context.card).get("answerOnly", True) and context.state != "answer":
+            return None
+        return context.card
+    if isinstance(context, Previewer):
+        card = context.card()
+        if card is None:
+            return None
+        if inject.card_settings(config(), card).get("answerOnly", True) and context.state() != "answer":
+            return None
+        return card
+    return None
+
+
+def request_authoring(raw: str, context) -> str:
+    from . import authoring
+
+    try:
+        proposal = bridge.Proposal.parse(raw)
+        card = context_card(context)
+        if not config().get("enabled", True) or card is None or int(card.id) != proposal.card_id:
+            raise bridge.BridgeError("This card has changed. Look the word up again.")
+        lookup = authoring.Lookup.from_selection(proposal.selection)
+        note_id = int(card.nid)
+        AUTHORING_GATE.enter()
+    except (bridge.BridgeError, authoring.AuthoringError) as error:
+        return json.dumps({"ok": False, "message": str(error)})
+
+    def open_native():
+        delegated = False
+        try:
+            current = context_card(context)
+            if current is None or int(current.id) != proposal.card_id or mw.col is None:
+                return
+            values = config()
+            if proposal.action == "add":
+                delegated = True
+                authoring.open_add_note(mw, lookup, config=values, save_config=save_config,
+                                        on_closed=AUTHORING_GATE.leave)
+            elif proposal.action == "update":
+                delegated = True
+                authoring.preview_update(mw, note_id, lookup, config=values, save_config=save_config,
+                                         on_closed=AUTHORING_GATE.leave)
+            else:
+                from aqt import dialogs
+                note_ids = authoring.find_existing_notes(mw.col, lookup, authoring.profiles_from_config(values))
+                if not note_ids:
+                    return showInfo("No matching Anki notes. Map your expression and reading fields in Shirabe's note settings.")
+                browser = dialogs.open("Browser", mw)
+                browser.search_for("nid:" + ",".join(str(nid) for nid in note_ids))
+        except (authoring.AuthoringError, ValueError) as error:
+            delegated = False
+            showWarning(str(error))
+        finally:
+            if not delegated:
+                AUTHORING_GATE.leave()
+
+    QTimer.singleShot(0, open_native)
+    return json.dumps({"ok": True})
 
 
 def open_settings() -> None:
@@ -121,8 +206,27 @@ def open_settings() -> None:
         on_save=lambda values: (save_config(values), tooltip("Shirabe settings saved")),
         on_sign_out=sign_out,
         on_sign_in=open_sign_in,
+        on_note_settings=open_note_settings,
+        on_study_sync=open_study_sync,
     )
     dialog.exec()
+
+
+def open_study_sync() -> None:
+    if not mw.col:
+        return showInfo("Open an Anki profile before configuring study sync.")
+    from .sync_ui import StudySyncDialog
+    from .sync_client import SyncError
+    try:
+        dialog = StudySyncDialog(mw, config().get("apiBase", "https://shirabe.org"))
+    except (ValueError, OSError, SyncError) as error:
+        return showWarning(str(error))
+    dialog.exec()
+
+
+def open_note_settings() -> None:
+    from . import authoring
+    authoring.configure_profiles(mw, config(), save_config)
 
 
 def open_sign_in() -> None:
@@ -141,26 +245,6 @@ def open_sign_in() -> None:
         dialog.exec()
     finally:
         web.cleanup()
-
-
-def _detail(raw: str) -> dict:
-    """The card's own properties, kept to scalars and a known size.
-
-    Whatever arrives here came from JavaScript on a card, which a shared deck
-    can author. It reaches an analytics payload, so it is bounded rather than
-    forwarded.
-    """
-    try:
-        parsed = json.loads(raw or "{}")
-    except ValueError:
-        return {}
-    if not isinstance(parsed, dict):
-        return {}
-    return {
-        str(key)[:40]: value
-        for key, value in list(parsed.items())[:10]
-        if isinstance(value, (str, int, float, bool)) and len(str(value)) <= 100
-    }
 
 
 def on_configured() -> None:
@@ -184,75 +268,20 @@ def note_types_with_shirabe() -> list[str]:
 
 
 def add_to_note_type() -> None:
-    """Put the card into a note type, so it works where no add-on runs.
-
-    Asks which one rather than guessing: a collection has note types the reader
-    never studies, and rewriting all of them is a change to their data they did
-    not ask for. It then asks again by name, because `chooseList` answers with a
-    row whether or not anybody chose one, and the first row is somebody's note
-    type.
-    """
-    models = sorted(mw.col.models.all(), key=lambda m: m["name"])
-    if not models:
-        return showWarning("This collection has no note types yet.")
-
-    def has_it(model: dict) -> bool:
-        return any(template.installed(c.get("qfmt", "") + c.get("afmt", "")) for c in model["tmpls"])
-
-    labels = [f"{m['name']}{'  ✓' if has_it(m) else ''}" for m in models]
-    picked = chooseList("Add the Shirabe card to which note type?", labels, parent=mw)
-    if not 0 <= picked < len(models):
-        return
-
-    model = models[picked]
-    if not askUser(f"Add the Shirabe card to the back of “{model['name']}”?"):
-        return
-
-    settings = config()
-    api_base = settings.get("apiBase", "https://shirabe.org")
-    # A note type syncs. An address that only resolves on this machine resolves
-    # to the PHONE once it lands there, and the block has no error branch, so
-    # the reader would sync, tap a word, and see nothing at all.
-    if not template.reaches_a_phone(api_base):
-        return showWarning(
-            f"“{api_base}” only works on this computer, so the card would do nothing on a phone.\n\n"
-            "Point Shirabe at an address the phone can reach (Settings… → Advanced): "
-            "your machine's name on the network for testing, or https://shirabe.org."
-        )
-
-    for card in model["tmpls"]:
-        # The answer side only. The question is usually the word being tested,
-        # and turning that into a tappable dictionary entry hands the reader the
-        # answer before they have recalled it.
-        card["afmt"] = template.with_block(
-            card["afmt"],
-            api_base,
-            template.CLIENT_ID,
-            settings.get("trigger", "click"),
-        )
-    mw.col.models.update_dict(model)
-
-    analytics.capture(settings, "note_type_linked", on_config_change=save_config)
-    showInfo(
-        f"Shirabe is now on the back of “{model['name']}”.\n\n"
-        "Sync, and the same card works on AnkiDroid and AnkiMobile. Tap a word to "
-        "look it up, and tap Sign in the first time to use your Shirabe account there."
-    )
+    from . import template_ui
+    template_ui.install_dialog(mw, config())
 
 
 def remove_from_note_types() -> None:
-    """Take it back out of every note type that has it."""
-    touched = []
-    for model in mw.col.models.all():
-        if not any(template.installed(c.get("qfmt", "") + c.get("afmt", "")) for c in model["tmpls"]):
-            continue
-        for card in model["tmpls"]:
-            card["qfmt"] = template.without_block(card["qfmt"])
-            card["afmt"] = template.without_block(card["afmt"])
-        mw.col.models.update_dict(model)
-        touched.append(model["name"])
+    from . import template_ui
+    template_ui.remove_dialog(mw)
 
-    tooltip(f"Removed from {len(touched)} note type(s)." if touched else "No note type had it.")
+
+def review_offline_storage() -> None:
+    from . import offline_ui
+    if mw.col is None:
+        return showInfo("Open a collection before reviewing its offline storage.")
+    offline_ui.review_cleanup(mw)
 
 
 def install_menu() -> None:
@@ -271,6 +300,12 @@ def install_menu() -> None:
     menu.addAction(enabled)
     menu.addSeparator()
     menu.addAction(open_action)
+    note_settings = QAction("Note fields, deck and tags…", mw)
+    note_settings.triggered.connect(open_note_settings)
+    menu.addAction(note_settings)
+    study_sync = QAction("Study sync…", mw)
+    study_sync.triggered.connect(open_study_sync)
+    menu.addAction(study_sync)
     menu.addSeparator()
 
     # The phone half. Separate from everything above it because it changes the
@@ -282,6 +317,9 @@ def install_menu() -> None:
     from_note_types.triggered.connect(remove_from_note_types)
     menu.addAction(to_note_type)
     menu.addAction(from_note_types)
+    storage = QAction("Review offline storage…", mw)
+    storage.triggered.connect(review_offline_storage)
+    menu.addAction(storage)
     mw.form.menuTools.addSeparator()
     mw.form.menuTools.addMenu(menu)
 
@@ -301,6 +339,53 @@ def on_profile_open() -> None:
                           {"addon_version": current, "reason": "update" if known else "install"},
                           on_config_change=save_config)
         save_config({**config(), "lastVersion": current})
+    if (Path(mw.pm.profileFolder()) / "shirabe-sync" / "state.sqlite3").exists():
+        from .sync_session import session_for
+        session_for(mw, settings.get("apiBase", "https://shirabe.org")).request()
+
+
+def request_study_sync(changes=None, initiator=None) -> None:
+    session = getattr(mw, "_shirabe_study_sync", None)
+    if session:
+        session.request(changes, initiator)
+
+
+def close_study_sync() -> None:
+    session = getattr(mw, "_shirabe_study_sync", None)
+    if session:
+        session.close()
+        mw._shirabe_study_sync = None
+
+
+def sync_before_profile_close(onsuccess, _old) -> None:
+    from .sync_closing import unload_profile
+
+    unload_profile(mw, onsuccess, _old)
+
+
+def install_browser_menu(browser) -> None:
+    from . import authoring_ui, offline_ui
+
+    menu = QMenu("Shirabe", browser)
+    for label, callback in (
+        ("Fill missing fields in selected notes…", lambda: authoring_ui.enrich_browser_selection(browser, config(), save_config)),
+        ("Prepare selected notes for offline lookup…", lambda: offline_ui.prepare_selected(browser, config(), save_config)),
+        ("Note fields, deck and tags…", open_note_settings),
+    ):
+        action = QAction(label, browser)
+        action.triggered.connect(callback)
+        menu.addAction(action)
+    browser.form.menubar.addMenu(menu)
+
+
+def install_editor_button(buttons, editor):
+    from . import authoring_ui
+
+    buttons.append(editor.addButton(
+        icon=None, cmd="shirabe-lookup", func=lambda current: authoring_ui.open_editor_lookup(current, config(), save_config),
+        tip="Look up Japanese and fill note fields with Shirabe", label="調べる",
+    ))
+    return buttons
 
 
 def _addon_version() -> str:
@@ -309,7 +394,15 @@ def _addon_version() -> str:
 
 
 gui_hooks.profile_did_open.append(on_profile_open)
+mw.unloadProfile = wrap(mw.unloadProfile, sync_before_profile_close, "around")
+gui_hooks.profile_will_close.append(close_study_sync)
+gui_hooks.operation_did_execute.append(request_study_sync)
+gui_hooks.sync_did_finish.append(request_study_sync)
+gui_hooks.reviewer_did_answer_card.append(lambda *_: request_study_sync())
+gui_hooks.state_did_change.append(lambda *_: request_study_sync())
 gui_hooks.card_will_show.append(on_card_will_show)
 gui_hooks.webview_did_receive_js_message.append(on_js_message)
 gui_hooks.main_window_did_init.append(install_menu)
+gui_hooks.browser_menus_did_init.append(install_browser_menu)
+gui_hooks.editor_did_init_buttons.append(install_editor_button)
 mw.addonManager.setConfigAction(__name__, on_configured)

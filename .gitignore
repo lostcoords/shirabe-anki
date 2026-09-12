@@ -1,4 +1,4 @@
-# Built from ../shirabe-sdk by `npm run build:anki`, never edited here.
+# Built from ../packages/card by `npm run build:anki`, never edited here.
 src/web/shirabe-card.js
 __pycache__/
 

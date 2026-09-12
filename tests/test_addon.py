@@ -116,25 +116,30 @@ class FakeCollection:
 
 
 class CollectionStates(unittest.TestCase):
+    def test_whole_note_text_is_not_used_without_explicit_heuristic_opt_in(self):
+        col = FakeCollection({"猫": [FakeCard(2, 21)]})
+        self.assertEqual(collection.states_for(col, ["猫"]), {"猫": "none"})
+        self.assertEqual(col.searched, [])
+
     def test_a_word_with_no_note_is_untracked(self):
         col = FakeCollection({})
         self.assertEqual(collection.states_for(col, ["猫"]), {"猫": "none"})
 
     def test_a_note_never_studied_is_new(self):
         col = FakeCollection({"猫": [FakeCard(collection.CARD_TYPE_NEW, 0)]})
-        self.assertEqual(collection.states_for(col, ["猫"])["猫"], "new")
+        self.assertEqual(collection.states_for(col, ["猫"], allow_heuristic=True)["猫"], "new")
 
     def test_a_young_card_is_learning_and_a_mature_one_is_known(self):
         young = FakeCollection({"猫": [FakeCard(2, 5)]})
-        self.assertEqual(collection.states_for(young, ["猫"])["猫"], "learning")
+        self.assertEqual(collection.states_for(young, ["猫"], allow_heuristic=True)["猫"], "learning")
         mature = FakeCollection({"猫": [FakeCard(2, 21)]})
-        self.assertEqual(collection.states_for(mature, ["猫"])["猫"], "retired")
+        self.assertEqual(collection.states_for(mature, ["猫"], allow_heuristic=True)["猫"], "retired")
 
     def test_the_word_is_escaped_by_anki_rather_than_by_us(self):
         # A word can contain Anki search syntax; a hand-built query would either
         # fail or match the wrong notes.
         col = FakeCollection({})
-        collection.states_for(col, ["ア*イ"])
+        collection.states_for(col, ["ア*イ"], allow_heuristic=True)
         self.assertEqual(col.searched, ['"ア*イ"'])
 
 
@@ -156,8 +161,8 @@ class PopupSwitch(unittest.TestCase):
         out = inject.with_card("<div>猫</div>", {"trigger": "shift"}, "/w")
         self.assertIn('"trigger": "shift"', out)
 
-    def test_a_config_with_no_trigger_hovers(self):
-        self.assertIn('"trigger": "hover"', inject.with_card("<div>猫</div>", {}, "/w"))
+    def test_a_config_with_no_trigger_uses_click(self):
+        self.assertIn('"trigger": "click"', inject.with_card("<div>猫</div>", {}, "/w"))
 
 
 class WithoutPython(unittest.TestCase):
@@ -244,7 +249,7 @@ class NoteType(unittest.TestCase):
         # Both can end up on one card: the add-on injects at render time and the
         # note type carries the block through a sync. The add-on has the token in
         # Python, so it is the one that should run.
-        self.assertIn("if (window.__shirabe) return;", self.added(self.THEIRS))
+        self.assertIn("if (window.__shirabe || window.__shirabeNativeRender) return;", self.added(self.THEIRS))
 
     def test_the_script_is_loaded_by_hand_because_the_page_is_already_loaded(self):
         # Anki writes a card into a page that loaded when the reviewer opened, so

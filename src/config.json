@@ -1,6 +1,8 @@
 {
   "enabled": true,
-  "trigger": "hover",
+  "trigger": "click",
+  "onlineParsing": false,
+  "answerOnly": true,
   "apiBase": "https://shirabe.org",
   "cardToken": "",
   "useCollectionStates": true,
