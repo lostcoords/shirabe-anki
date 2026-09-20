@@ -1071,16 +1071,14 @@ unimplemented shared-entry format. Eight one-word notes ranged from 1,967 bytes
 for 食べる to 16,447 for かける, whose alternatives were capped.
 
 The reports, original response captures, provenance, exact selected corpus
-indexes, and rerun commands are in
-[`tmp/anki-real-corpus.jcS1Bd/README.md`](../../tmp/anki-real-corpus.jcS1Bd/README.md).
-That baseline predates the compression implementation below. It does not measure
+indexes, and rerun commands were retained with the measurement run. That baseline
+predates the compression implementation below. It does not measure
 uploaded-entry stress or native media persistence.
 
 ## Full-book compression, 2026-09-13
 
-The complete 2,464-passage _Botchan_ capture and production replay are in
-[`tmp/anki-full-corpus.fSGAjI/README.md`](../../tmp/anki-full-corpus.fSGAjI/README.md).
-Raw JSON remains 124,441,859 bytes, with 37,205 of 38,117 tokens prepared.
+The complete 2,464-passage _Botchan_ capture and production replay produced raw
+JSON of 124,441,859 bytes, with 37,205 of 38,117 tokens prepared.
 Compression writes 25,865,594 verified media bytes across 2,460 files, so all
 2,464 snapshots fit within the existing 25 MiB collection budget. The earlier
 uncompressed native run stopped after 596 notes. This excludes audio, scripts,
@@ -1145,8 +1143,7 @@ the cross-language snapshot/example contracts pass 3 tests and 131 assertions.
 The first sequential after-run was slower in elapsed time than its baseline
 (median 1,707.934 versus 1,218.985 ms). Interleaving retains large elapsed
 outliers too. Shared-machine wall time does not support a whole-workflow speedup
-claim. The reports preserve those results alongside the CPU comparison in
-[`tmp/anki-persist-profile.ZNB2uC/README.md`](../../tmp/anki-persist-profile.ZNB2uC/README.md).
+claim. The reports preserve those results alongside the CPU comparison.
 
 `snapshot_persistence_measure.py` is the rerunnable native lever. Each round
 uses a fresh empty collection and the same preloaded objects and timestamps.
@@ -1222,8 +1219,7 @@ definition, selected identity or alternative list changes, and primary lookups
 remain identical. This is the reader change on fixed saved snapshots, not a
 rerun of Python preparation or a linguistic quality score. The four primary
 allocation losses and eight contextual selection differences remain. Frozen
-bundles, token-level evidence and the rerunnable script are in
-[`tmp/anki-patched-subset.Kamj6v/REPORT.md`](../../tmp/anki-patched-subset.Kamj6v/REPORT.md).
+bundles, token-level evidence and the rerunnable script were retained with the run.
 
 The later actual-popup audit in `tmp/anki-refresh-policy.25nlU6/REPORT.md`
 distinguishes those comparison differences from the learner's click path. All
@@ -1282,8 +1278,8 @@ A CSS-only reproduction retained 300 detached roots without loading the SDK;
 the transition-free control retained none. Suppressing the SDK transition
 listener did not help, and its registrations and removals stayed balanced.
 These controls do not justify a production lifecycle change or larger payload
-limits. Full reports, executable probes and their safeguards are in
-[`tmp/sdk-retained-memory.zvcs6t/README.md`](../../tmp/sdk-retained-memory.zvcs6t/README.md).
+limits. Full reports, executable probes and their safeguards were retained with
+the run.
 
 A separate feasibility probe delivered 351 native animation frames and one
 completed CSS transition without a window. `QWebEnginePage.setVisible(true)`
@@ -1311,8 +1307,7 @@ excluded; the engine's underlying cause remains unproven. Standalone opacity
 animation does not prove the popup's background transition advances.
 
 All runs are terminal. No 1,800-flip retry, CSS change or guard relaxation was
-made. Full reports and rerunnable instruments are in
-[`tmp/sdk-frame-memory.q86FTw/REPORT.md`](../../tmp/sdk-frame-memory.q86FTw/REPORT.md).
+made. Full reports and rerunnable instruments were retained with the run.
 A real viewport/client check is still needed before interpreting popup retention.
 
 ## Empty cross-reference metadata, 2026-09-13
@@ -1373,9 +1368,8 @@ python3 anki-addon/tests/android_probe.py \
   --expected-model 'REPLACE_WITH_INFO_MODEL' --allow-physical tap '猫'
 ```
 
-Frozen inputs, exact witnesses and executable replays are in
-[`tmp/anki-empty-relations.fPugwC/REPORT.md`](../../tmp/anki-empty-relations.fPugwC/REPORT.md).
-The corpus replay is terminal. It is not a new capture from the changed server,
+Frozen inputs, exact witnesses and executable replays were retained with the
+run. The corpus replay is terminal. It is not a new capture from the changed server,
 a wire-compression measurement, or a solution to the collection storage limit.
 
 ## Current feature-complete UX candidate, 2026-09-14 JST
