@@ -224,11 +224,10 @@ From the repository root, build the add-on's shared popup:
 ```sh
 npm --prefix packages/card run build:anki
 python3 anki-addon/tests/run.py
-python3 anki-addon/tests/check_against_anki.py
 ```
 
-Run the Python suite with Anki's bundled Python as well to exercise collection
-and Qt tests; ordinary Python skips those checks. Use the isolated-profile
+Ordinary Python runs the portable suite. CI runs the same suite against its
+pinned Anki runtime to exercise collection and Qt tests. Use the isolated-profile
 [Desktop runner](tests/desktop_check.py) and
 [fixture deck generator](tests/fixture_deck.py) for client verification.
 

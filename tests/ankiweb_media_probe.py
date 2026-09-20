@@ -11,8 +11,11 @@ import time
 
 
 def digest(path, algorithm="sha1"):
+    hasher = hashlib.new(algorithm)
     with path.open("rb") as file:
-        return hashlib.file_digest(file, algorithm).hexdigest()
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
 
 
 class PreservedMedia:

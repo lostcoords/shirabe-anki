@@ -6,6 +6,14 @@ import json
 from pathlib import Path
 
 
+def digest(path):
+    hasher = hashlib.sha256()
+    with path.open("rb") as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b""):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+
 def configuration(directory):
     from urllib.parse import urlsplit
 
@@ -21,9 +29,8 @@ def configuration(directory):
     package = Path(config["package"]).resolve(strict=True)
     if not package.is_relative_to(scratch) or package.suffix != ".apkg":
         raise ValueError("The trial package must remain under workspace tmp")
-    with package.open("rb") as source:
-        if hashlib.file_digest(source, "sha256").hexdigest() != config["package_sha256"]:
-            raise ValueError("The saved trial package changed")
+    if digest(package) != config["package_sha256"]:
+        raise ValueError("The saved trial package changed")
     collection = root / "collection.anki2"
     if collection.is_symlink() or collection.exists() and (not collection.is_file() or collection.stat().st_nlink != 1):
         raise ValueError("The retained collection must be a private regular file")

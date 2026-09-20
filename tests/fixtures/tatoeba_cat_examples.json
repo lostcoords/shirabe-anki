@@ -41,14 +41,14 @@
       {
         "id": "tatoeba:tatoeba_10098762",
         "japanese": "イスの上に猫が座ってるよ。",
-        "translations": [{"lang": "en", "text": "There's a cat sitting on the chair."}]
+        "translations": [{ "lang": "en", "text": "There's a cat sitting on the chair." }]
       },
       {
         "id": "tatoeba:tatoeba_9032775",
         "japanese": "猫が眠ってるよ。",
-        "translations": [{"lang": "en", "text": "The cat is asleep."}]
+        "translations": [{ "lang": "en", "text": "The cat is asleep." }]
       }
     ],
-    "pagination": {"hasMore": false, "cursor": null}
+    "pagination": { "hasMore": false, "cursor": null }
   }
 }

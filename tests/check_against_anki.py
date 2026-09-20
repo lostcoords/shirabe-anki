@@ -10,21 +10,15 @@ from __future__ import annotations
 
 import argparse
 import ast
+import importlib.util
 import subprocess
 import sys
 from pathlib import Path
 
 SRC = Path(__file__).resolve().parent.parent / "src"
 
-CANDIDATES = [
-    Path.home() / "Library/Application Support/AnkiProgramFiles/.venv/bin/python",
-    Path("/usr/local/share/anki/bin/python"),
-    Path.home() / ".local/share/AnkiProgramFiles/.venv/bin/python",
-]
-
-
 def anki_python() -> Path | None:
-    return next((p for p in CANDIDATES if p.exists()), None)
+    return Path(sys.executable) if importlib.util.find_spec("anki") else None
 
 
 def imported_names() -> dict[str, set[str]]:
@@ -225,8 +219,7 @@ def main() -> int:
     parser.add_argument("--python", type=Path, help="Python environment containing the Anki version to check")
     python = parser.parse_args().python or anki_python()
     if not python:
-        print("No installed Anki found, so nothing to check against.")
-        print("Looked in:", *[f"  {p}" for p in CANDIDATES], sep="\n")
+        print("No Anki runtime is active, so nothing to check against.")
         return 0
 
     import json

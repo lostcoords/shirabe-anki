@@ -198,10 +198,10 @@ both real 120 ms transitions are asserted. The second run uses the reusable
 runner below, whose source hash matches the report. Its visible snapshot
 references are also checked against the fixture manifest.
 
-| Measured opening | First run median / p95 | Repeat run median / p95 |
-| --- | ---: | ---: |
-| First after navigation | 17.95 / 32.0 ms | 16.6 / 23.1 ms |
-| Immediate repeat | 19.0 / 31.9 ms | 17.4 / 41.8 ms |
+| Measured opening       | First run median / p95 | Repeat run median / p95 |
+| ---------------------- | ---------------------: | ----------------------: |
+| First after navigation |        17.95 / 32.0 ms |          16.6 / 23.1 ms |
+| Immediate repeat       |         19.0 / 31.9 ms |          17.4 / 41.8 ms |
 
 These are shared-Mac/software-emulator timings, not app cold starts or phone
 budgets. The runs made 193 and 192 local snapshot requests, respectively, with
@@ -994,12 +994,12 @@ The 24.04 environment uses its own Anki packages with current-installation
 dependency fallbacks. The before-cache baseline is
 `tmp/anki-preparation-measure.uAx73y/` (`*-final.json` and `*-minimum.json`).
 
-| Five-case mode | Requests before / after | Stored bytes before / after | Complete notes before / after |
-| --- | ---: | ---: | ---: |
-| Definitions | 153 / 10 | 78,111 / 80,648 | 4 / 5 |
-| Examples | 159 / 18 | 80,894 / 86,096 | 2 / 2 |
-| Audio | 156 / 13 | 131,146 / 135,507 | 4 / 5 |
-| Examples and audio | 162 / 21 | 133,929 / 140,955 | 2 / 2 |
+| Five-case mode     | Requests before / after | Stored bytes before / after | Complete notes before / after |
+| ------------------ | ----------------------: | --------------------------: | ----------------------------: |
+| Definitions        |                153 / 10 |             78,111 / 80,648 |                         4 / 5 |
+| Examples           |                159 / 18 |             80,894 / 86,096 |                         2 / 2 |
+| Audio              |                156 / 13 |           131,146 / 135,507 |                         4 / 5 |
+| Examples and audio |                162 / 21 |           133,929 / 140,955 |                         2 / 2 |
 
 These are boundary workloads with synthetic word identities, not a sample of
 learners' decks. The 70-token case now prepares all definitions; extra saved
@@ -1055,7 +1055,7 @@ and replay hits are counted separately; neither is an authenticated HTTP or WAN
 benchmark. The six harness regressions include an escaped response that failed
 before preserving its wire bytes.
 
-The 33 excerpts spanning all eleven chapters of *Botchan* produced 2,614,909
+The 33 excerpts spanning all eleven chapters of _Botchan_ produced 2,614,909
 uncompressed snapshot bytes, median 84,294 per note, excluding audio and shared
 scripts. All 33 snapshots are distinct. Five notes lose token results at the
 128 KiB limit; 755 of 772 token occurrences remain prepared. Another limit also
@@ -1078,7 +1078,7 @@ uploaded-entry stress or native media persistence.
 
 ## Full-book compression, 2026-09-13
 
-The complete 2,464-passage *Botchan* capture and production replay are in
+The complete 2,464-passage _Botchan_ capture and production replay are in
 [`tmp/anki-full-corpus.fSGAjI/README.md`](../../tmp/anki-full-corpus.fSGAjI/README.md).
 Raw JSON remains 124,441,859 bytes, with 37,205 of 38,117 tokens prepared.
 Compression writes 25,865,594 verified media bytes across 2,460 files, so all
@@ -1115,11 +1115,11 @@ current largest-decoded `-pass.json`. Its first report failed only because the
 probe included an unsupported CSP directive in a meta element; that report is
 retained. The production bundle did not change between these runs.
 
-| File | Anki 25.09.4 median / p95 load ms | Anki 24.04 median / p95 load ms |
-| --- | ---: | ---: |
-| Largest decoded v2 | 19.55 / 27.60 | 23.45 / 64.20 |
-| Largest stored v2 | 19.15 / 25.70 | 27.55 / 53.70 |
-| Legacy v1 | 9.75 / 23.90 | 10.30 / 35.90 |
+| File               | Anki 25.09.4 median / p95 load ms | Anki 24.04 median / p95 load ms |
+| ------------------ | --------------------------------: | ------------------------------: |
+| Largest decoded v2 |                     19.55 / 27.60 |                   23.45 / 64.20 |
+| Largest stored v2  |                     19.15 / 25.70 |                   27.55 / 53.70 |
+| Legacy v1          |                      9.75 / 23.90 |                   10.30 / 35.90 |
 
 These include hash verification, decoding and validation, but use in-memory
 responses. They are not filesystem, network, reviewer interaction, AnkiWeb or
@@ -1157,7 +1157,7 @@ These are background local-library measurements, not GUI, mobile or WAN timings.
 
 ## Candidate allocation and rich content, 2026-09-13
 
-`offline_allocation_replay.py` compares all 2,464 captured *Botchan* passages,
+`offline_allocation_replay.py` compares all 2,464 captured _Botchan_ passages,
 including ordered candidate payloads, parser pins and token spans. The report
 `tmp/anki-coverage.vEp0Ff/production-pinned-first.json` freezes Python `51afb76d`
 and SDK `ac17613f`. It compares the previous sequential allocation with one
@@ -1323,11 +1323,11 @@ Removing only those arrays from its 8,040 distinct identify responses removes
 full definitions for all 7,405 changed candidate objects; all 8,000 nonempty
 targets, readings and labels remain intact.
 
-| Frozen-response replay | Unique compressed bytes | Passages fitting 25 MiB |
-| --- | ---: | ---: |
-| Original | 26,987,806 | 2,396 |
-| Compact already saved content | 26,683,604 | 2,417 |
-| Compact responses before allocation | 26,896,640 | 2,401 |
+| Frozen-response replay              | Unique compressed bytes | Passages fitting 25 MiB |
+| ----------------------------------- | ----------------------: | ----------------------: |
+| Original                            |              26,987,806 |                   2,396 |
+| Compact already saved content       |              26,683,604 |                   2,417 |
+| Compact responses before allocation |              26,896,640 |                   2,401 |
 
 The last two persistence counts are modeled, not native save results. Repeated
 empty keys already compress well: content-only compaction saves 1.13% on disk.
