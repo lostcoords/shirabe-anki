@@ -19,7 +19,7 @@ def source_tag():
 
 def rich_entry():
     return {
-        "order": 0, "dictionary": "publisher", "dictionaryName": "Publisher dictionary",
+        "dictionary": "publisher", "dictionaryName": "Publisher dictionary",
         "type": "word", "sourceId": "rich:1",
         "sourceHeadwords": [{"text": "猫", "reading": "ねこ", "tags": [source_tag()], "rules": ["n"], "score": 7.25}],
         "senses": [

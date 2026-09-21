@@ -28,15 +28,16 @@ def prepare_cat(snapshot, recording, downloaded, example_fixture=None):
     if len(cats) != 1:
         raise ValueError("Expected one synthetic cat definition.")
     candidate = copy.deepcopy(cats[0])
-    token = {"surface": "猫", "lemma": "猫", "reading": candidate["reading"], "kind": "word", "length": 1,
-             "position": len(segment["text"].split("猫")[0].encode("utf-16-le")) // 2,
-             "entry": {"dictionary": "jmdict", "sourceId": candidate["sourceId"]}}
+    start = len(segment["text"].split("猫")[0].encode("utf-16-le")) // 2
+    token = {"surface": "猫", "lemma": "猫", "reading": candidate["reading"], "kind": "word",
+             "startOffset": start, "endOffset": start + 1}
     sources = [row for row in snapshot.get("sources", []) if row["slug"] != "tatoeba"]
     if example_fixture is not None:
         sources.append(example_fixture["corpus"])
     backend = SimpleNamespace(recordings=lambda _: [recording])
     audio = offline_audio.AudioBatch(backend, offline.MAX_TOTAL_BYTES, download=lambda *args, **options: downloaded)
-    item = offline.prepare_snapshot([segment["text"]], parse=lambda _: {"tokens": [token]},
+    item = offline.prepare_snapshot([segment["text"]],
+                                   parse=lambda text: {"results": [{"text": text, "tokens": [token]}]},
                                    identify=lambda _: {"words": [{"candidates": [candidate]}]},
                                    content_version=snapshot["contentVersion"], allowed_dictionaries={"jmdict"},
                                    preferences=snapshot.get("preferences"), sources=sources, audio=audio,

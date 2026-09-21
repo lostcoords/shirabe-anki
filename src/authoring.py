@@ -115,6 +115,7 @@ class Lookup:
     lemma: str = ""
     reading: str = ""
     entry: str = ""
+    word_id: str = ""
     meanings: tuple[str, ...] = ()
     sentence: str = ""
     translation: str = ""
@@ -131,6 +132,7 @@ class Lookup:
         if not (self.lemma.strip() or self.surface.strip()):
             raise AuthoringError("Choose a word first.")
         _text(self.entry, "entry", 256)
+        _text(self.word_id, "word id", 512)
         if self.entry:
             parts = self.entry.split(":", 1)
             if len(parts) != 2 or not all(part.strip() for part in parts) or any(unicodedata.category(c) == "Cc" for c in self.entry):

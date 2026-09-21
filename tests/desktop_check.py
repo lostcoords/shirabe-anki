@@ -64,15 +64,20 @@ def fixture_api():
                 self.respond({"title": "Fixture dictionary is offline"}, 503)
                 return
             if path == "/api/v1/me":
-                self.respond({"credential": {"scopes": ["READ_ACCOUNT", "READ_DICTIONARY", "READ_SRS"]},
-                              "preferences": {"languages": ["en"], "uiLocale": "en", "dictionaries": ["jmdict"],
-                                              "dictionaryReveal": {"jmdict": "show"}, "stackFingerprint": "phase0-fixture"}})
+                self.respond({"credential": {"scopes": ["user:account:read", "user:dictionary:read", "user:study:read"]},
+                              "preferences": {"uiLocale": "en"}})
+            elif path == "/api/v1/dictionary-stack":
+                self.respond({"dictionaryStack": {"fingerprint": "phase0-fixture", "sources": [
+                    {"dictionary": "jmdict", "languages": ["en"], "reveal": "show"},
+                ]}})
             elif path == "/api/v1/dictionaries":
-                self.respond({"dictionaries": [{"slug": "jmdict", "name": "Phase0 synthetic dictionary", "type": "word",
+                self.respond({"dictionaries": [{"slug": "jmdict", "name": "Phase0 synthetic dictionary", "kind": "definition",
                                                "languages": ["en"], "visibility": "official", "entryCount": 16,
-                                               "source": {"name": "Deterministic test data", "license": "CC0-1.0"}}]})
+                                               "capabilities": ["search", "definitions", "offline"],
+                                               "attribution": {"source": {"name": "Deterministic test data", "url": "https://example.test"},
+                                                               "license": {"name": "CC0-1.0"}}}]})
             elif path == "/api/v1/parse":
-                self.respond({**parse(data["text"]), "stackFingerprint": "phase0-fixture"})
+                self.respond({**parse(data["texts"][0]), "stackFingerprint": "phase0-fixture"})
             elif path == "/api/v1/words/identify":
                 self.respond({"words": [{"candidates": [candidate(token.get("lemma") or token.get("surface") or "猫")]} for token in data["tokens"]],
                               "stackFingerprint": "phase0-fixture"})
@@ -266,7 +271,7 @@ class Driver:
         self.report["native_prepare_collected_runs"] = workflow.texts
         self.report["native_prepare_requests"] = self.requests[self.prepare_request_start:]
         self.check("native_prepare_requires_explicit_consent", not self.report["native_prepare_consent"]["permission_checked_initially"] and not self.report["native_prepare_consent"]["start_enabled_initially"])
-        self.check("native_prepare_metadata_only_before_consent", all(r["path"] in ("/api/v1/me", "/api/v1/dictionaries") for r in self.report["native_prepare_consent"]["requests_before_consent"]))
+        self.check("native_prepare_metadata_only_before_consent", all(r["path"] in ("/api/v1/me", "/api/v1/dictionary-stack", "/api/v1/dictionaries") for r in self.report["native_prepare_consent"]["requests_before_consent"]))
         snapshots = {}
         for target in targets:
             note = self.mw.col.get_note(target["id"])
@@ -455,7 +460,8 @@ class Driver:
             self.js("ShirabeAnki.open(window.__shirabe);true")
         self.wait(lambda: any(urlsplit(r["path"]).path == "/api/v1/parse" for r in self.requests[request_start:]), "explicit online parse")
         self.settle(1)
-        parse_texts = [r["body"].get("text", "") for r in self.requests[request_start:] if urlsplit(r["path"]).path == "/api/v1/parse"]
+        parse_texts = [text for r in self.requests[request_start:] if urlsplit(r["path"]).path == "/api/v1/parse"
+                       for text in r["body"].get("texts", [])]
         self.report["opted_in_cloze_parse_texts"] = parse_texts
         self.check("online_consent_causes_parse", bool(parse_texts))
         self.check("hidden_active_cloze_not_uploaded", all("寿司" not in t and "CLOZE_EXTRA_ONLY" not in t for t in parse_texts))

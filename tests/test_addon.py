@@ -181,7 +181,7 @@ class WithoutPython(unittest.TestCase):
             self.assertIn(call, source)
 
     def test_the_card_asks_for_no_writes(self):
-        # `WRITE_SRS` is one coarse scope covering deletes, bulk edits and
+        # `user:study:write` is one coarse scope covering deletes, bulk edits and
         # reviews, so the card's client is not given it. Taking the buttons away
         # is the SDK's job (`attach` strips what `canWrite: false` denies, and
         # its own suite proves the card then draws neither the buttons nor an
@@ -203,7 +203,7 @@ class Outbound(unittest.TestCase):
     working in production while every test here still passes."""
 
     def test_every_request_carries_a_user_agent_we_own(self):
-        request = net.json_request("https://x.test/api/v1/parse", {"text": "猫"})
+        request = net.json_request("https://x.test/api/v1/parse", {"texts": ["猫"]})
         self.assertIn("Shirabe-Anki/", request.get_header("User-agent"))
 
     def test_no_module_builds_a_request_of_its_own(self):

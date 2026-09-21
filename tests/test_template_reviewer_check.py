@@ -272,9 +272,11 @@ class NativeFixtureMetadata(unittest.TestCase):
             snapshot = batch.rows[0][1].snapshot
             self.assertEqual(offline.validate_snapshot(snapshot), snapshot)
             self.assertEqual(snapshot['preferences'], {'languages': ['en'], 'dictionaryReveal': {'jmdict': 'show'}})
-            self.assertEqual(snapshot['sources'][0]['source'], {'name': 'Deterministic test data', 'license': 'CC0-1.0'})
+            self.assertEqual(snapshot['sources'][0]['source'], {
+                'name': 'Deterministic test data', 'url': 'https://example.test', 'license': 'CC0-1.0',
+            })
             self.assertNotIn('entryCount', snapshot['sources'][0])
-            self.assertEqual(len(requests), 4)
+            self.assertEqual(len(requests), 5)
         finally:
             server.shutdown()
             server.server_close()

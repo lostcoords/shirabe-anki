@@ -116,11 +116,11 @@ class SelectedMedia(unittest.TestCase):
         class Backend:
             def __init__(self, *args, **kwargs):
                 pass
-            def _request(self, path):
-                calls.append(path)
-                return {"dictionary": "jmdict", "sourceId": "word:cat", "reading": "ネコ", "pitch": [
+            def identify(self, token):
+                calls.append(token)
+                return {"words": [{"candidates": [{"dictionary": "jmdict", "sourceId": "word:cat", "reading": "ネコ", "pitch": [
                     {"downstep": 1, "pattern": "HL", "audioUrl": url},
-                    {"downstep": 0, "pattern": "LH", "audioUrl": "https://third-party.example/voice.m4a"}]}
+                    {"downstep": 0, "pattern": "LH", "audioUrl": "https://third-party.example/voice.m4a"}]}]}]}
 
         lookup = Lookup(lemma="猫", entry="jmdict:word:cat", audio_urls=("file:///private/steal.mp3",))
         with patch("shirabe_addon.offline.DictionaryBackend", Backend):
@@ -129,7 +129,7 @@ class SelectedMedia(unittest.TestCase):
         self.assertIn("ねこ", result[0].label)
         self.assertIn("1", result[0].label)
         self.assertEqual(result[0].media, media.LicensedMedia(url, "Shirabe", "Permitted for Anki deck synchronization and export"))
-        self.assertEqual(calls, ["/words/%E7%8C%AB?entry=jmdict%3Aword%3Acat"])
+        self.assertEqual(calls, [{"lemma": "猫", "surface": "", "reading": ""}])
 
     def test_recording_approval_excludes_other_paths_hosts_and_custom_dictionary_entries(self):
         approved = "https://cdn.shirabe.org/audio/words/" + "a" * 64 + ".m4a"
@@ -147,7 +147,9 @@ class SelectedMedia(unittest.TestCase):
 
     def test_recording_response_must_match_the_pinned_entry(self):
         with patch("shirabe_addon.offline.DictionaryBackend") as backend:
-            backend.return_value._request.return_value = {"dictionary": "jmdict", "sourceId": "other"}
+            backend.return_value.identify.return_value = {
+                "words": [{"candidates": [{"dictionary": "jmdict", "sourceId": "other"}]}]
+            }
             with self.assertRaisesRegex(AuthoringError, "does not match"):
                 media.recordings_from_config({}, Lookup(lemma="猫", entry="jmdict:cat"))
 
@@ -165,11 +167,11 @@ class ExampleCorpus(unittest.TestCase):
             calls.append((path, params))
             return {"examples" if "/words/" in path else "sentences": rows}
 
-        examples = search_examples(fetch, Lookup(lemma="猫", surface="猫", entry="jmdict:1467640"), max_length=10)
-        self.assertEqual(len(calls), 2)
-        self.assertEqual(calls[0][1]["entry"], "jmdict:1467640")
-        self.assertEqual(calls[1][1]["query"], "猫")
-        self.assertEqual(calls[1][1]["entry"], "jmdict:1467640")
+        examples = search_examples(fetch, Lookup(lemma="猫", surface="猫", entry="jmdict:1467640", word_id="猫-ねこ"), max_length=10)
+        self.assertEqual(len(calls), 1)
+        self.assertEqual(calls[0][1]["filter[wordId]"], "猫-ねこ")
+        self.assertEqual(calls[0][1]["filter[translationLanguages][]"], "en")
+        self.assertEqual(calls[0][1]["query"], "猫")
         self.assertEqual([(e.japanese, e.translation, e.source, e.reference) for e in examples], [("猫です。", "A cat.", "Tatoeba", "tatoeba:1")])
 
     def test_cancellation_and_invalid_filters_make_no_requests(self):

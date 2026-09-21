@@ -64,7 +64,7 @@ class CorpusMeasurementTests(unittest.TestCase):
         self.assertEqual(len(transport.failures), 1)
 
     def test_production_response_cap_remains_active_during_replay(self):
-        query = {"method": "POST", "path": "/api/v1/parse?locale=en", "body": {"text": "猫", "dictionaries": ["jmdict"]}}
+        query = {"method": "POST", "path": "/api/v1/parse", "body": {"texts": ["猫"]}}
         transport = Responses({wire(query): {"response_body": json.dumps({"padding": "x" * offline.MAX_RESPONSE_BYTES}), "controller_ms": 1}})
         report = measure(["猫"], {"preferences": PREFERENCES, "sources": SOURCES}, transport)
         self.assertEqual(report["complete_notes"], 0)
@@ -72,7 +72,7 @@ class CorpusMeasurementTests(unittest.TestCase):
         self.assertEqual(report["snapshot_bytes"]["total"], 0)
 
     def test_transport_preserves_original_wire_bytes_before_the_native_cap(self):
-        query = {"method": "POST", "path": "/api/v1/parse?locale=en", "body": {"text": "猫", "dictionaries": ["jmdict"]}}
+        query = {"method": "POST", "path": "/api/v1/parse", "body": {"texts": ["猫"]}}
         raw = json.dumps({"padding": "猫" * 60_000}, ensure_ascii=True)
         self.assertGreater(len(raw.encode()), offline.MAX_RESPONSE_BYTES)
         transport = Responses({wire(query): {"payload": json.loads(raw), "response_body": raw, "controller_ms": 1}})

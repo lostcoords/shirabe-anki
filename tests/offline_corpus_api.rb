@@ -21,19 +21,17 @@ end
 
 user = User.new(name: "Offline corpus fixture", prefs: { "sources" => [ "jmdict:en" ] },
   tokenization_characters_per_request: 5000, tokenization_characters_per_minute: 1_000_000)
-credential = ApiKey.new(scopes: [ "READ_DICTIONARY" ])
+credential = ApiKey.new(scopes: [ "user:dictionary:read" ])
 routes = {
-  [ "POST", "/api/v1/parse?locale=en" ] => [ Api::V1::ParseController, :create ],
-  [ "POST", "/api/v1/words/identify?locale=en" ] => [ Api::V1::WordsController, :identify ],
+  [ "POST", "/api/v1/parse" ] => [ Api::V1::ParseController, :create ],
+  [ "POST", "/api/v1/words/identify" ] => [ Api::V1::WordsController, :identify ],
   [ "GET", "/api/v1/dictionaries" ] => [ Api::V1::DictionariesController, :index ]
 }
 call = lambda do |request|
   controller, action = routes.fetch([ request.fetch("method"), request.fetch("path") ])
   body = request["body"]
-  raise "Only the official JMdict stack is in scope" if body && body["dictionaries"] != [ "jmdict" ]
-
   env = Rack::MockRequest.env_for(request.fetch("path"), method: request.fetch("method"),
-    input: body&.to_json.to_s, "CONTENT_TYPE" => "application/json")
+    input: body&.to_json.to_s, "CONTENT_TYPE" => "application/json", "HTTP_ACCEPT_LANGUAGE" => "en")
   env["shirabe.current_user"] = user
   env["shirabe.credential"] = credential
   started = Process.clock_gettime(Process::CLOCK_MONOTONIC)

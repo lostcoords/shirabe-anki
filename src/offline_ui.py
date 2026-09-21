@@ -618,7 +618,7 @@ def prepare_selected(browser, config, save_config):
             except offline.SnapshotError as error:
                 return self.fail(error)
             me, dictionaries = answer
-            if "READ_ACCOUNT" not in me["credential"]["scopes"]:
+            if "user:preferences:read" not in me["credential"]["scopes"]:
                 return self.fail(offline.SnapshotError("Reconnect to Shirabe to permit dictionary preferences"))
             self.preferences = me["preferences"]
             self.dictionaries = dictionaries["dictionaries"]

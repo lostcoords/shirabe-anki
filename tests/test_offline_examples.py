@@ -151,13 +151,13 @@ class PreparedExamples(unittest.TestCase):
         calls = []
         def request(path, fields=None):
             calls.append((path, fields))
-            if path.startswith("/parse?"):
-                return parse(fields["text"])
-            if path.startswith("/words/identify?"):
+            if path == "/parse":
+                return parse(fields["texts"][0])
+            if path == "/words/identify":
                 return identify(fields["tokens"][0])
             self.assertTrue(path.startswith("/sentences?"), path)
             self.assertIsNone(fields)
-            self.assertEqual(parse_qs(urlsplit(path).query), {"entry": ["jmdict:1"], "query": ["猫"], "take": ["2"], "locale": ["es"]})
+            self.assertEqual(parse_qs(urlsplit(path).query), {"entry": ["jmdict:1"], "query": ["猫"], "limit": ["2"]})
             return response(sentence())
         backend._request = request
         note = offline_ui.CapturedNote(1, "revision", (), None, None)
@@ -168,7 +168,8 @@ class PreparedExamples(unittest.TestCase):
             batch = offline_ui.prepare_batch([note], {1: ["猫"]}, backend, include_examples=enabled, **options)
             self.assertEqual(len(batch.rows), 1)
             self.assertEqual(len(calls), 3 if enabled else 2)
-            self.assertTrue(all(fields["dictionaries"] == ["jmdict"] for _, fields in calls if fields))
+            self.assertNotIn("dictionaries", calls[0][1])
+            self.assertEqual(calls[1][1]["dictionaries"], ["jmdict"])
             self.assertEqual(bool(examples(batch.rows[0][1].snapshot)), enabled)
 
     def test_sentence_response_header_is_bounded_before_body_read(self):

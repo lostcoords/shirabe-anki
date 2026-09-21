@@ -36,7 +36,7 @@ class OfflineMeasurementTests(unittest.TestCase):
         self.assertEqual(report["unique_audio_files"], 1)
         self.assertEqual(report["unique_audio_bytes"], len(M4A))
         self.assertEqual(report["request_counts"]["audio_download"], 1)
-        self.assertEqual(report["request_counts"]["/api/v1/words/identify"], 2)
+        self.assertEqual(report["request_counts"]["/api/v1/words/identify"], 4)
         self.assertEqual(report["request_counts"]["/api/v1/sentences"], 16)
         self.assertEqual(report["requests"], sum(report["request_counts"].values()))
         self.assertEqual(report["batch_budget_bytes"], report["batch_payload_bytes"] + len(M4A))

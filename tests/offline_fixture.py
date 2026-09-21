@@ -12,7 +12,7 @@ def candidate(word="猫", source_id="1"):
         "headword": word, "reading": "ネコ", "common": True, "name": False,
         "pitch": [{"downstep": 1, "pattern": "HL", "audioUrl": "https://private.test/audio?token=secret"}],
         "forms": [], "furigana": [{"text": word, "ruby": "ねこ"}],
-        "entries": [{"order": 0, "dictionary": "jmdict", "sourceId": source_id, "type": "word",
+        "entries": [{"dictionary": "jmdict", "sourceId": source_id, "type": "word",
                      "senses": [{"position": 3, "definitions": [{"lang": "en", "text": "cat"}, {"lang": "es", "text": "gato"}],
                                  "tags": [], "study": {"cardId": 42}}]}],
         "study": {"state": "due", "decks": ["private"]}, "access": "secret",
@@ -24,10 +24,10 @@ def parse(text):
     tokens = []
     for char in text:
         length = len(char.encode("utf-16-le")) // 2
-        tokens.append({"surface": char, "lemma": char, "reading": "ネコ", "position": position,
-                       "length": length, "kind": "symbol" if char in ("😀", "は") else "word", "state": "due"})
+        tokens.append({"surface": char, "lemma": char, "reading": "ネコ", "startOffset": position,
+                       "endOffset": position + length, "kind": "function" if char == "は" else "symbol" if char == "😀" else "word"})
         position += length
-    return {"tokens": tokens, "credentials": "secret"}
+    return {"results": [{"text": text, "tokens": tokens}], "stackFingerprint": "dictionary-v1-en-es", "credentials": "secret"}
 
 
 def identify(token):
@@ -44,11 +44,12 @@ def prepared(texts=("😀猫は猫", "犬"), **kwargs):
 
 def inflected(texts=("食べました", "食べない"), **kwargs):
     def parsed(text):
-        return {"tokens": [{"surface": text, "position": 0, "length": len(text), "lemma": "食べる",
-                            "reading": "タベマシタ" if text == "食べました" else "タベナイ", "pos": "verb", "kind": "word",
-                            "entry": {"dictionary": "jmdict", "sourceId": "1"},
-                            "inflection": {"labels": ["past", "polite"] if text == "食べました" else ["negative"],
-                                           "base": "食べる", "access": "secret"}}]}
+        labels = ["past", "polite"] if text == "食べました" else ["negative"]
+        return {"results": [{"text": text, "tokens": [{"surface": text, "startOffset": 0, "endOffset": len(text), "lemma": "食べる",
+                            "reading": "タベマシタ" if text == "食べました" else "タベナイ", "partOfSpeech": "verb", "kind": "word",
+                            "inflection": {"forms": [{"code": label, "label": label} for label in labels],
+                                           "base": "食べる", "access": "secret"}}]}],
+                "stackFingerprint": "dictionary-v1-en-es"}
     word = candidate("食べる")
     word["reading"] = "タベル"
     word["furigana"] = [{"text": "食", "ruby": "た"}, {"text": "べる"}]

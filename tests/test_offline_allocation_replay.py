@@ -11,7 +11,7 @@ from offline_allocation_replay import CANDIDATE, assert_equivalent, checked_byte
 
 def snapshot():
     candidate = {"id": "開く", "dictionary": "jmdict", "sourceId": "1", "headword": "開く", "common": True,
-                 "pitch": [], "forms": [], "entries": [{"dictionary": "jmdict", "sourceId": "1", "order": 0, "type": "definition",
+                 "pitch": [], "forms": [], "entries": [{"dictionary": "jmdict", "sourceId": "1", "type": "definition",
                  "senses": [{"position": 0, "definitions": [{"lang": "en", "text": "open"}, {"lang": "es", "text": "abrir"}], "tags": []}]}]}
     other = deepcopy(candidate)
     other["sourceId"] = "2"
@@ -79,14 +79,13 @@ class AllocationReplayTests(unittest.TestCase):
         value["entries"][0]["senses"][0]["definitions"][0]["text"] = "mutated"
         self.assertEqual(raw["entries"][0]["senses"][0]["definitions"][0]["text"], "open")
 
-    def test_reference_parser_preserves_utf16_offsets_pin_and_inflection(self):
-        tokens = parsed_tokens("😀開いた", {"tokens": [
-            {"surface": "😀", "position": 0, "length": 2, "kind": "symbol"},
-            {"surface": "開いた", "position": 2, "length": 3, "kind": "word", "lemma": "開く",
-             "entry": {"dictionary": "jmdict", "sourceId": "1"}, "inflection": {"labels": ["past"], "base": "開く"}}]})
+    def test_reference_parser_preserves_utf16_offsets_and_inflection(self):
+        tokens = parsed_tokens("😀開いた", {"results": [{"tokens": [
+            {"surface": "😀", "startOffset": 0, "endOffset": 2, "kind": "symbol"},
+            {"surface": "開いた", "startOffset": 2, "endOffset": 5, "kind": "inflected", "lemma": "開く",
+             "inflection": {"forms": [{"code": "past", "label": "past"}], "base": "開く"}}]}]})
         self.assertFalse(tokens[0]["content"])
         self.assertEqual(tokens[1]["start"], 2)
-        self.assertEqual(tokens[1]["entry"], "jmdict:1")
         self.assertEqual(tokens[1]["inflection"], ["past"])
         self.assertEqual(tokens[1]["inflectionBase"], "開く")
 

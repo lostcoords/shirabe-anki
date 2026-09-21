@@ -18,8 +18,8 @@ class RecordingDownloads(unittest.TestCase):
         if download_url is not None:
             pitch["audioDownloadUrl"] = download_url
         with patch("shirabe_addon.offline.DictionaryBackend") as backend:
-            backend.return_value._request.return_value = {
-                "dictionary": "jmdict", "sourceId": "cat", "reading": "ねこ", "pitch": [pitch]}
+            backend.return_value.identify.return_value = {"words": [{"candidates": [{
+                "dictionary": "jmdict", "sourceId": "cat", "reading": "ねこ", "pitch": [pitch]}]}]}
             return media.recordings_from_config({}, self.lookup)
 
     def test_verified_mp3_is_used_for_note_fields_without_changing_popup_source(self):

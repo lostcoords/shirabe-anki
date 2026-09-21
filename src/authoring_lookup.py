@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote, urlencode
+from urllib.parse import quote
 
 from .authoring import AuthoringError, Example, Lookup, _text, identity_text
 
@@ -34,10 +34,10 @@ def candidates_from_response(response, *, surface: str, language="en", languages
             raise AuthoringError("Invalid dictionary candidate.")
         entry = f"{row.get('dictionary', '')}:{row.get('sourceId', '')}"
         entries = row.get("entries", [])
-        if not isinstance(entries, list) or len(entries) > 16 or any(not isinstance(e, dict) or type(e.get("order")) is not int for e in entries):
+        if not isinstance(entries, list) or len(entries) > 16 or any(not isinstance(e, dict) for e in entries):
             raise AuthoringError("Invalid dictionary entries.")
         meanings, refs = [], []
-        for source in sorted(entries, key=lambda e: e["order"]):
+        for source in entries:
             senses = source.get("senses", [])
             if not isinstance(senses, list) or len(senses) > 64:
                 raise AuthoringError("Invalid dictionary senses.")
@@ -66,9 +66,10 @@ def candidates_from_response(response, *, surface: str, language="en", languages
             examples.append(Example(example["japanese"], translation, example.get("source", ""), example.get("id", "")))
         result.append(Lookup(surface=surface, lemma=row.get("headword", ""), expression=row.get("headword", ""),
                              reading=identity_text(row.get("reading") or "", reading=True), entry=entry,
+                             word_id=row.get("id", ""),
                              meanings=tuple(meanings), sense_refs=tuple(refs), examples=tuple(examples),
                              pitch=tuple(p["downstep"] for p in row.get("pitch", [])),
-                             source=api_base.rstrip("/") + "/" + language + "/words/" + quote(row.get("id", surface), safe="") + "?entry=" + quote(entry, safe="")))
+                             source=api_base.rstrip("/") + "/" + language + "/words/" + quote(row.get("id", surface), safe="")))
     return tuple(result)
 
 
@@ -85,16 +86,13 @@ def resolver_from_config(config):
         if preferences is None:
             preferences = backend.me()["preferences"]
         languages = preferences.get("languages") or [language]
+        token = {"lemma": identity.expression, "surface": identity.expression}
+        if identity.reading:
+            token["reading"] = identity.reading
+        response = backend.identify(token)
+        candidates = candidates_from_response(response, surface=identity.expression, language=language,
+                                              languages=languages, api_base=base)
         if identity.entry:
-            Lookup(lemma=identity.expression, entry=identity.entry)
-            path = "/words/" + quote(identity.expression, safe="") + "?" + urlencode({
-                "entry": identity.entry, "include": "examples", "locale": preferences.get("uiLocale", language),
-            })
-            response = {"words": [{"candidates": [backend._request(path)]}]}
-        else:
-            token = {"lemma": identity.expression, "surface": identity.expression}
-            if identity.reading:
-                token["reading"] = identity.reading
-            response = backend.identify(token)
-        return candidates_from_response(response, surface=identity.expression, language=language, languages=languages, api_base=base)
+            candidates = tuple(candidate for candidate in candidates if candidate.entry == identity.entry)
+        return candidates
     return resolve

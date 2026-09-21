@@ -22,7 +22,7 @@ import time
 from typing import Callable, Iterable
 import urllib.error
 import urllib.request
-from urllib.parse import quote, urlencode, urlsplit
+from urllib.parse import urlencode, urlsplit
 import zlib
 
 from . import net, offline_audio
@@ -191,7 +191,7 @@ SENSE = {
     "seeAlso?": _array(CROSS_REFERENCE, 32),
 }
 ENTRY = {
-    "order": _integer, "dictionary": _string, "dictionaryName?": _string,
+    "dictionary": _string, "dictionaryName?": _string,
     "type": _string, "sourceId": _string,
     "sourceHeadwords?": _array({"text": _string, "reading": _string, "tags": _array(SOURCE_TAG, 32),
                                 "rules": _array(lambda v: _string(v, 128), 16), "score": _number}, 128),
@@ -218,12 +218,15 @@ CANDIDATE = {
     "examples?": _array({"japanese": lambda v: _string(v, 2048), "translations?": _array({"lang": _string, "text": lambda v: _string(v, 2048)}, 8)}, 8),
 }
 CANDIDATE_HEADER = {key: value for key, value in CANDIDATE.items() if key != "entries"}
-INFLECTION = {"labels": _array(lambda v: _string(v, 128), 16), "base": _string}
+INFLECTION = {
+    "base": _string,
+    "forms": _array({"code": _string, "label": lambda value: _string(value, 128)}, 16),
+}
 TOKEN = {
     "surface": _string, "start": _integer, "length": _integer,
     "entry?": _string, "lemma?": _string, "reading?": _string,
     "pos?": _string, "content?": _boolean,
-    "inflection?": INFLECTION["labels"], "inflectionBase?": INFLECTION["base"],
+    "inflection?": _array(lambda value: _string(value, 128), 16), "inflectionBase?": INFLECTION["base"],
 }
 PREFERENCES = {"languages": _array(_string, 32), "dictionaryReveal": _reveal}
 SOURCE = {
@@ -302,6 +305,13 @@ def _entry_available(token, candidates):
     return not token.get("entry") or any(_entry_id(candidate) == token["entry"] for candidate in candidates)
 
 
+def _same_parse_tokens(current, saved):
+    def without_identity(token):
+        return {key: value for key, value in token.items() if key != "entry"}
+    return len(current) == len(saved) and all(without_identity(left) == without_identity(right)
+                                               for left, right in zip(current, saved))
+
+
 def _allocate_results(snapshot, pending, maximum, issues):
     alternatives = []
     for segment, result in pending:
@@ -343,22 +353,29 @@ def _tokens(text, values):
 
 
 def _parsed_tokens(text, answer):
-    if not isinstance(answer, dict) or not isinstance(answer.get("tokens"), list) or len(answer["tokens"]) > MAX_TOKENS:
+    results = answer.get("results") if isinstance(answer, dict) else None
+    if not isinstance(results, list) or len(results) != 1 or not isinstance(results[0], dict):
+        raise SnapshotError("Invalid parser response")
+    raw_tokens = results[0].get("tokens")
+    if not isinstance(raw_tokens, list) or len(raw_tokens) > MAX_TOKENS:
         raise SnapshotError("Invalid parser response")
     values = []
-    for raw in answer["tokens"]:
+    for raw in raw_tokens:
         if not isinstance(raw, dict):
             raise SnapshotError("Invalid parser token")
-        value = {"surface": raw.get("surface"), "start": raw.get("position"), "length": raw.get("length"), "content": raw.get("kind") != "symbol"}
-        for key in ("lemma", "reading", "pos"):
+        start = raw.get("startOffset")
+        end = raw.get("endOffset")
+        value = {"surface": raw.get("surface"), "start": start,
+                 "length": end - start if isinstance(start, int) and isinstance(end, int) else None,
+                 "content": raw.get("kind") not in ("function", "symbol")}
+        for key in ("lemma", "reading"):
             if raw.get(key) is not None:
                 value[key] = raw[key]
-        if raw.get("entry") is not None:
-            entry = raw["entry"]
-            value["entry"] = f"{_string(entry['dictionary'])}:{_string(entry['sourceId'])}"
+        if raw.get("partOfSpeech") is not None:
+            value["pos"] = raw["partOfSpeech"]
         if raw.get("inflection") is not None:
             inflection = _clean(INFLECTION, raw["inflection"])
-            value["inflection"] = inflection["labels"]
+            value["inflection"] = [form["label"] for form in inflection["forms"]]
             value["inflectionBase"] = inflection["base"]
         values.append(value)
     return _tokens(text, values)
@@ -733,7 +750,13 @@ def prepare_snapshot(texts: Iterable[str], *, parse: Callable, identify: Callabl
                 snapshot["segments"].pop()
                 issues.append("byte_limit")
                 break
-            old_results = {r["tokenIndex"]: r for r in saved["results"]} if saved and saved["tokens"] == tokens else {}
+            if saved and _same_parse_tokens(tokens, saved["tokens"]):
+                for token, old_token in zip(tokens, saved["tokens"]):
+                    if old_token.get("entry"):
+                        token["entry"] = old_token["entry"]
+                old_results = {result["tokenIndex"]: result for result in saved["results"]}
+            else:
+                old_results = {}
             for token_index, token in enumerate(tokens):
                 if token.get("content") is False:
                     continue
@@ -758,6 +781,8 @@ def prepare_snapshot(texts: Iterable[str], *, parse: Callable, identify: Callabl
                         if (lookup_cache is not None and candidates is not None and len(issues) == issue_count
                                 and _entry_available(token, candidates) and not cancelled()):
                             lookup_cache.put(query, entry, candidates)
+                    if candidates and not token.get("entry"):
+                        token["entry"] = _entry_id(candidates[0])
                     result = {"tokenIndex": token_index, "candidates": candidates} if candidates is not None else old_results.get(token_index)
                 except Exception as error:
                     result = old_results.get(token_index)
@@ -1094,7 +1119,7 @@ class DictionaryBackend:
 
     def _request(self, path, fields=None):
         url = self._base + "/api/v1" + path
-        headers = {"Authorization": f"Bearer {self._access()}"}
+        headers = {"Authorization": f"Bearer {self._access()}", "Accept-Language": self._locale}
         request = net.request(url, headers=headers) if fields is None else net.json_request(url, fields, headers=headers)
         try:
             with self._opener.open(request, timeout=15) as response:
@@ -1106,7 +1131,7 @@ class DictionaryBackend:
                 answer = json.loads(data)
                 self.check_access()
                 fingerprint = answer.get("stackFingerprint") if isinstance(answer, dict) else None
-                required = self._fingerprint is not None and path.startswith(("/parse?", "/words/identify?"))
+                required = self._fingerprint is not None and path in ("/parse", "/words/identify")
                 if required and fingerprint is None:
                     self._failure = "server_update_required"
                     self.check_access()
@@ -1128,40 +1153,73 @@ class DictionaryBackend:
             raise SnapshotError("Dictionary request unavailable") from None
 
     def me(self):
-        """Read preferences and granted scopes; exclude identity and study data."""
-        return _clean({
+        """Read account preferences and the dictionary stack used by offline preparation."""
+        account = _clean({
             "credential": {"scopes": _array(_string, 64)},
-            "preferences": {
-                "uiLocale": _string, "dictionaries": _array(_string, 128),
-                "stackFingerprint": _string, "languages": _array(_string, 32),
-                "dictionaryReveal?": _reveal,
-                "stackIsPrivate?": _boolean,
-                "personalDictionaries?": _array({"slug": _string, "name": _string}, 128),
-            },
         }, self._request("/me"))
+        account["preferences"] = _clean({"preferences": {"uiLocale": _string}}, self._request("/preferences"))["preferences"]
+        stack = _clean({"dictionaryStack": {
+            "fingerprint": _string,
+            "sources": _array({
+                "dictionary": _string, "languages": _array(_string, 32), "reveal": _string,
+            }, 128),
+        }}, self._request("/dictionary-stack"))["dictionaryStack"]
+        sources = stack["sources"]
+        references = [f"{source['dictionary']}:{language}" for source in sources for language in source["languages"]]
+        languages = list(dict.fromkeys(language for source in sources for language in source["languages"]))
+        fingerprint = stack["fingerprint"]
+        if self._fingerprint is not None and fingerprint != self._fingerprint:
+            self._failure = "dictionary_changed"
+            self.check_access()
+        self._fingerprint = fingerprint
+        account["preferences"].update({
+            "dictionaries": references,
+            "languages": languages,
+            "stackFingerprint": fingerprint,
+            "dictionaryReveal": {source["dictionary"]: source["reveal"] for source in sources},
+        })
+        return account
 
     def dictionaries(self):
         """Read bounded dictionary metadata without requesting any pack assets."""
-        return _clean({"dictionaries": _array({
-            "slug": _string, "name": _string, "type": _string,
+        answer = _clean({"dictionaries": _array({
+            "slug": _string, "name": _string, "kind": _string,
             "languages": _array(_string, 32), "visibility?": _string,
-            "entryCount?": _nullable(_integer), "attribution?": _nullable(lambda v: _string(v, 4096)),
-            "source?": _nullable({"name?": _string, "url?": _string, "license?": _string, "licenseUrl?": _string}),
+            "entryCount?": _nullable(_integer), "capabilities": _array(_string, 32),
+            "attribution?": _nullable({
+                "text?": _string,
+                "source": _nullable({"name": _string, "url": _string}),
+                "license": _nullable({"name": _string, "url?": _string}),
+            }),
         }, 128)}, self._request("/dictionaries"))
+        dictionaries = []
+        for dictionary in answer["dictionaries"]:
+            attribution = dictionary.get("attribution") or {}
+            origin = attribution.get("source") or {}
+            license = attribution.get("license") or {}
+            source = {"name": origin.get("name"), "url": origin.get("url"),
+                      "license": license.get("name"), "licenseUrl": license.get("url")}
+            dictionaries.append({
+                "slug": dictionary["slug"], "name": dictionary["name"], "type": dictionary["kind"],
+                "languages": dictionary["languages"], "visibility": dictionary.get("visibility"),
+                "entryCount": dictionary.get("entryCount"), "attribution": attribution.get("text"),
+                "source": {key: value for key, value in source.items() if value is not None} or None,
+            })
+        return {"dictionaries": dictionaries}
 
     def parse(self, text: str):
-        return self._request("/parse?" + urlencode({"locale": self._locale}), {"text": _string(text, MAX_TEXT_UNITS), **self._selection})
+        return self._request("/parse", {"texts": [_string(text, MAX_TEXT_UNITS)]})
 
     def identify(self, token: dict):
         query = _clean({"lemma": _string, "surface": _string, "reading?": _string, "pos?": _string}, token)
-        return self._request("/words/identify?" + urlencode({"locale": self._locale}), {
+        return self._request("/words/identify", {
             "tokens": [query], "include": ["pitch", "frequency", "furigana", "jlpt", "forms", "notes", "relations"],
             **self._selection,
         })
 
     def examples(self, candidate):
         query = urlencode({"entry": _string(_entry_id(candidate)), "query": _string(candidate.get("headword"), 64),
-                           "take": MAX_EXAMPLES_PER_ENTRY, "locale": self._locale})
+                           "limit": MAX_EXAMPLES_PER_ENTRY})
         return self._request("/sentences?" + query)
 
     def recordings(self, candidate):
@@ -1170,11 +1228,16 @@ class DictionaryBackend:
         from .authoring_media import Recording, RECORDING_URL
         if candidate.get("dictionary") != "jmdict":
             return ()
-        entry = "jmdict:" + _string(candidate.get("sourceId"))
-        query = urlencode({"entry": entry, "dictionaries": "jmdict", "locale": self._locale})
-        detail = self._request("/words/" + quote(_string(candidate.get("headword")), safe="") + "?" + query)
-        if (not isinstance(detail, dict) or detail.get("dictionary") != "jmdict"
-                or detail.get("sourceId") != candidate["sourceId"]
+        token = {"lemma": _string(candidate.get("headword")),
+                 "surface": _string(candidate.get("headword")),
+                 "reading": _string(candidate.get("reading"))}
+        identified = self._request("/words/identify", {
+            "tokens": [token], "include": ["pitch"], "dictionaries": ["jmdict"],
+        })
+        candidates = identified.get("words", [{}])[0].get("candidates", []) if isinstance(identified, dict) else []
+        detail = next((row for row in candidates if row.get("dictionary") == "jmdict"
+                       and row.get("sourceId") == candidate["sourceId"]), None)
+        if (not isinstance(detail, dict)
                 or identity_text(_string(detail.get("reading"), 256), reading=True)
                 != identity_text(_string(candidate.get("reading"), 256), reading=True)):
             raise SnapshotError("Recording response does not match the prepared entry", code="audio_unavailable")

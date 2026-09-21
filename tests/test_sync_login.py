@@ -17,7 +17,7 @@ class SyncLoginTest(unittest.TestCase):
         self.grant = {"device_code": "private-code", "user_code": "ABCD", "verification_uri": "https://shirabe.example/link",
                       "verification_uri_complete": "https://shirabe.example/link?code=ABCD", "expires_in": 600, "interval": 5}
         self.tokens = {"access_token": "private-access", "refresh_token": "private-refresh", "expires_in": 3600,
-                       "scope": "READ_SRS WRITE_SRS"}
+                       "scope": "user:study:read user:study:write"}
 
     def tearDown(self):
         self.directory.cleanup()
@@ -100,7 +100,7 @@ class SyncLoginTest(unittest.TestCase):
 
     def test_unexpected_scopes_or_verification_origins_are_rejected(self):
         with self.assertRaises(SyncError):
-            self.login.save_tokens({**self.tokens, "scope": "READ_SRS"})
+            self.login.save_tokens({**self.tokens, "scope": "user:study:read"})
         with patch.object(SyncClient, "device_authorization", return_value={**self.grant, "verification_uri_complete": "https://attacker.example"}):
             with self.assertRaises(SyncError):
                 self.login.start_login()

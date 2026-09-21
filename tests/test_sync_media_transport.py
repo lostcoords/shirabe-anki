@@ -144,7 +144,7 @@ class SyncMediaTransportTest(unittest.TestCase):
     def test_media_uses_native_login_refresh_for_all_three_requests(self):
         login = SyncLogin(private_sync_path(self.directory.name), self.origin)
         tokens = {"access_token": "old", "refresh_token": "refresh", "expires_in": 1,
-                  "scope": "READ_SRS WRITE_SRS"}
+                  "scope": "user:study:read user:study:write"}
         with patch("shirabe_addon.sync_login.time", return_value=100):
             login.save_tokens(tokens)
         self.client = login

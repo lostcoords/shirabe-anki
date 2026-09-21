@@ -67,33 +67,17 @@ class OfflineLookupReuse(unittest.TestCase):
         self.assertEqual(len(backend.queries), 2)
         self.assertNotEqual(first.snapshot["segments"], second.snapshot["segments"])
 
-    def test_pinned_entries_remain_distinct(self):
-        backend = Backend()
-        proper_name = candidate(source_id="2")
-        proper_name["name"] = True
-        backend.answer = lambda _: {"words": [{"candidates": [candidate(), proper_name]}]}
-        def parsed(text):
-            answer = parse(text)
-            for index, token in enumerate(answer["tokens"]):
-                token["entry"] = {"dictionary": "jmdict", "sourceId": str(index + 1)}
-            return answer
-        backend.parse = parsed
-        item = batch(backend, [["猫猫"]]).rows[0][1]
-        self.assertTrue(item.complete, item.issues)
-        self.assertEqual(len(backend.queries), 2)
-        first, second = item.snapshot["segments"][0]["results"]
-        self.assertEqual([c["sourceId"] for c in first["candidates"]], ["1"])
-        self.assertEqual([c["sourceId"] for c in second["candidates"]], ["1", "2"])
-
     def test_lemma_surface_reading_and_part_of_speech_are_all_part_of_the_query(self):
         for field, value in (("lemma", "ねこ"), ("surface", "犬"), ("reading", "ビョウ"), ("pos", "verb")):
             with self.subTest(field=field):
                 backend = Backend()
                 def parsed(text):
                     answer = parse(text)
-                    for token in answer["tokens"]:
-                        token.update(lemma="猫", reading="ネコ", pos="noun")
-                    answer["tokens"][1][field] = value
+                    tokens = answer["results"][0]["tokens"]
+                    for token in tokens:
+                        token.update(lemma="猫", reading="ネコ", partOfSpeech="noun")
+                    api_field = "partOfSpeech" if field == "pos" else field
+                    tokens[1][api_field] = value
                     return answer
                 backend.parse = parsed
                 result = batch(backend, [["猫犬" if field == "surface" else "猫猫"]])

@@ -323,15 +323,17 @@ class RefreshedMetadata(unittest.TestCase):
         detail = candidate()
         detail["pitch"][0]["audioUrl"] = "https://cdn.shirabe.org/audio/words/" + "a" * 64 + ".m4a"
         detail["pitch"][0]["audioDownloadUrl"] = detail["pitch"][0]["audioUrl"][:-4] + ".mp3"
-        with patch.object(backend, "_request", return_value=detail) as request:
+        with patch.object(backend, "_request", return_value={"words": [{"candidates": [detail]}]}) as request:
             rows = backend.recordings(candidate())
         self.assertEqual(len(rows), 1)
-        query = parse_qs(urlsplit(request.call_args.args[0]).query)
-        self.assertEqual(query, {"entry": ["jmdict:1"], "dictionaries": ["jmdict"], "locale": ["es"]})
+        self.assertEqual(request.call_args.args, ("/words/identify", {
+            "tokens": [{"lemma": "猫", "surface": "猫", "reading": "ネコ"}],
+            "include": ["pitch"], "dictionaries": ["jmdict"],
+        }))
         self.assertEqual(rows[0].reading, "ねこ")
         self.assertEqual(rows[0].download_url, detail["pitch"][0]["audioDownloadUrl"])
         for field, value in (("dictionary", "uploaded"), ("sourceId", "other"), ("reading", "イヌ")):
-            with patch.object(backend, "_request", return_value={**detail, field: value}), self.assertRaises(offline.SnapshotError):
+            with patch.object(backend, "_request", return_value={"words": [{"candidates": [{**detail, field: value}]}]}), self.assertRaises(offline.SnapshotError):
                 backend.recordings(candidate())
         with patch.object(backend, "_request") as request:
             self.assertEqual(backend.recordings({"dictionary": "uploaded"}), ())

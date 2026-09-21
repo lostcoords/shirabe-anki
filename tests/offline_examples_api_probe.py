@@ -16,9 +16,13 @@ class CapturedResponses:
         path = url.path.removeprefix("/api/v1")
         body = json.loads(request.data) if request.data else None
         if body is not None:
-            assert body["dictionaries"] == ["jmdict"], body
+            if path == "/parse":
+                assert body == {"texts": ["猫"]}, body
+            else:
+                assert body["dictionaries"] == ["jmdict"], body
         elif path == "/sentences":
-            assert parse_qs(url.query) == {"query": ["猫"], "entry": ["jmdict:offline-cat"], "take": ["2"], "locale": ["es"]}
+            assert parse_qs(url.query) == {"query": ["猫"], "entry": ["jmdict:offline-cat"], "limit": ["2"]}
+        assert request.headers["Accept-language"] == "es"
         calls.append((request.get_method(), path))
         raw = json.dumps(captured[path], ensure_ascii=False).encode()
         result = io.BytesIO(raw)
@@ -37,5 +41,5 @@ assert len(batch.rows) == 1 and not batch.issue_notes, batch
 item = batch.rows[0][1]
 assert item.requests == 3 and item.complete
 assert offline.validate_snapshot(item.snapshot) == item.snapshot
-assert calls == [("GET", "/me"), ("GET", "/dictionaries"), ("POST", "/parse"), ("POST", "/words/identify"), ("GET", "/sentences")], calls
+assert calls == [("GET", "/me"), ("GET", "/dictionary-stack"), ("GET", "/dictionaries"), ("POST", "/parse"), ("POST", "/words/identify"), ("GET", "/sentences")], calls
 print(json.dumps({"snapshot": item.snapshot}, ensure_ascii=False))

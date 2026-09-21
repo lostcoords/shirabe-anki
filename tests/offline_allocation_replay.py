@@ -18,6 +18,7 @@ import select
 import subprocess
 import sys
 from types import SimpleNamespace
+from urllib.parse import urlsplit
 
 ROOT = Path(__file__).resolve().parents[2]
 MANIFEST = Path(__file__).with_name("offline_allocation_inputs.json")
@@ -84,13 +85,13 @@ def parsed_tokens(text, answer):
     tokens = []
     encoded = text.encode("utf-16-le")
     end = 0
-    for raw in answer["tokens"]:
-        token = {"surface": raw["surface"], "start": raw["position"], "length": raw["length"], "content": raw.get("kind") != "symbol"}
-        token.update({key: raw[key] for key in ("lemma", "reading", "pos") if raw.get(key) is not None})
-        if raw.get("entry") is not None:
-            token["entry"] = entry_id(raw["entry"])
+    for raw in answer["results"][0]["tokens"]:
+        token = {"surface": raw["surface"], "start": raw["startOffset"], "length": raw["endOffset"] - raw["startOffset"],
+                 "content": raw.get("kind") not in ("function", "symbol")}
+        token.update({key: raw[source] for key, source in (("lemma", "lemma"), ("reading", "reading"), ("pos", "partOfSpeech"))
+                      if raw.get(source) is not None})
         if raw.get("inflection") is not None:
-            token.update(inflection=deepcopy(raw["inflection"]["labels"]), inflectionBase=raw["inflection"]["base"])
+            token.update(inflection=[form["label"] for form in raw["inflection"]["forms"]], inflectionBase=raw["inflection"]["base"])
         assert token["start"] >= end
         end = token["start"] + token["length"]
         assert encoded[token["start"] * 2:end * 2] == token["surface"].encode("utf-16-le")
@@ -108,7 +109,7 @@ def captured_answers(records):
     answers = {}
     for record in records.values():
         request = record["request"]
-        if "/words/identify?" not in request["path"]:
+        if urlsplit(request["path"]).path != "/api/v1/words/identify":
             continue
         value = json.loads(record["response_body"])["words"][0]
         candidates = []
@@ -128,7 +129,7 @@ def captured_answers(records):
 
 def note_reference(text, metadata, records, answers):
     preferences = metadata["preferences"]
-    request = {"method": "POST", "path": "/api/v1/parse?locale=en", "body": {"text": text, "dictionaries": ["jmdict"]}}
+    request = {"method": "POST", "path": "/api/v1/parse", "body": {"texts": [text]}}
     tokens = parsed_tokens(text, json.loads(records[wire(request)]["response_body"]))
     version = digest(wire({"stack": preferences["stackFingerprint"], "dictionaries": preferences["dictionaries"],
                            "languages": preferences["languages"], "locale": preferences["uiLocale"], "approved": ["jmdict"]}))

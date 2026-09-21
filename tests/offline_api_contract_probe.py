@@ -18,12 +18,13 @@ class CapturedResponses:
         path = urlsplit(request.full_url).path.removeprefix("/api/v1")
         body = json.loads(request.data) if request.data else None
         if body is not None:
-            assert body["dictionaries"] == ["personal-cat", "jmdict"], body
-            assert parse_qs(urlsplit(request.full_url).query) == {"locale": [captured["/me"]["preferences"]["uiLocale"]]}
+            assert not parse_qs(urlsplit(request.full_url).query)
+            assert request.headers["Accept-language"] == captured["/me"]["preferences"]["uiLocale"]
             if path == "/parse":
-                assert body["text"] == text
+                assert body == {"texts": [text]}
             else:
                 assert path == "/words/identify" and "examples" not in body["include"]
+                assert body["dictionaries"] == ["personal-cat", "jmdict"], body
                 assert "relations" in body["include"]
         calls.append((request.get_method(), path))
         data = json.dumps(captured[path], ensure_ascii=False).encode()
@@ -54,14 +55,16 @@ assert len(batch.rows) == 2 and not batch.issue_notes, batch
 snapshot = batch.rows[0][1].snapshot
 assert batch.rows[1][1].snapshot == snapshot
 assert offline.validate_snapshot(snapshot) == snapshot and snapshot["complete"]
-for raw, token in zip(captured["/parse"]["tokens"], snapshot["segments"][0]["tokens"]):
+for raw, token in zip(captured["/parse"]["results"][0]["tokens"], snapshot["segments"][0]["tokens"]):
     inflection = raw.get("inflection") or {}
-    assert token.get("inflection") == inflection.get("labels"), (token, inflection)
+    if inflection:
+        assert token.get("inflection") == [form["label"] for form in inflection["forms"]], (token, inflection)
     assert token.get("inflectionBase") == inflection.get("base"), (token, inflection)
 assert snapshot["preferences"]["dictionaryReveal"] == preferences["dictionaryReveal"]
 assert next(item for item in snapshot["sources"] if item["slug"] == "jmdict")["source"]["license"] == "EDRDG"
 assert next(item for item in snapshot["sources"] if item["slug"] == "personal-cat")["attribution"] == "Fixture attribution"
-assert calls == [("GET", "/me"), ("GET", "/dictionaries"), ("POST", "/parse"), ("POST", "/words/identify"), ("POST", "/parse")], calls
+assert calls == [("GET", "/me"), ("GET", "/dictionary-stack"), ("GET", "/dictionaries"),
+                 ("POST", "/parse"), ("POST", "/words/identify"), ("POST", "/parse")], calls
 for reason, changed in captured.get("drift", {}).items():
     source = backend(locale=preferences["uiLocale"], dictionaries=selection, stack_fingerprint=preferences["stackFingerprint"])
     original_parse = captured["/parse"]

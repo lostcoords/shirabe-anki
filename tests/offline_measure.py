@@ -78,23 +78,28 @@ class FixtureTransport:
         body = json.loads(request.data) if request.data else None
         assert timeout == 15
         if body is not None:
-            assert request.get_method() == "POST" and body["dictionaries"] == ["jmdict"]
+            assert request.get_method() == "POST"
+            if path != "/api/v1/parse":
+                assert body["dictionaries"] == ["jmdict"]
         else:
             assert request.get_method() == "GET"
         self.calls.append((path, body))
         if path == "/api/v1/parse":
-            payload = parse(body["text"])
+            payload = parse(body["texts"][0])
         elif path == "/api/v1/words/identify":
-            assert body["include"] == ["pitch", "frequency", "furigana", "jlpt", "forms", "notes", "relations"]
-            payload = identify(body["tokens"][0])
+            if body["include"] == ["pitch"]:
+                payload = identify(body["tokens"][0])
+                for row in payload["words"][0]["candidates"]:
+                    if row["dictionary"] == "jmdict" and row["sourceId"] == "1":
+                        row["pitch"] = [{"downstep": 1, "pattern": "HL", "audioUrl": RECORDING_URL}]
+            else:
+                assert body["include"] == ["pitch", "frequency", "furigana", "jlpt", "forms", "notes", "relations"]
+                payload = identify(body["tokens"][0])
         elif path == "/api/v1/sentences":
-            assert self.example_response is not None and query["take"] == ["2"]
+            assert self.example_response is not None and query["limit"] == ["2"]
             payload = self.example_response if query["entry"] == ["jmdict:1"] else {"sentences": [], "pagination": {"hasMore": False}}
         else:
-            assert path.startswith("/api/v1/words/") and query["dictionaries"] == ["jmdict"], path
-            source_id = query["entry"][0].split(":")[1]
-            payload = {"dictionary": "jmdict", "sourceId": source_id, "reading": "ネコ",
-                       "pitch": [{"downstep": 1, "pattern": "HL", "audioUrl": RECORDING_URL}] if source_id == "1" else []}
+            raise AssertionError(path)
         if path in ("/api/v1/parse", "/api/v1/words/identify"):
             payload["stackFingerprint"] = PREFERENCES["stackFingerprint"]
         data = json.dumps(payload, ensure_ascii=False).encode()

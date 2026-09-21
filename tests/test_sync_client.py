@@ -68,7 +68,7 @@ class SyncClientTest(unittest.TestCase):
         self.client.device_authorization()
         self.assertIsNone(self.requests[-1][1])
         self.assertEqual("shirabe-anki-sync", self.requests[-1][2]["client_id"])
-        self.assertEqual("READ_SRS WRITE_SRS", self.requests[-1][2]["scope"])
+        self.assertEqual("user:study:read user:study:write", self.requests[-1][2]["scope"])
         self.client.batch(123, {"key": "epoch", "request_key": "retry"})
         self.assertEqual("/api/v1/srs/anki/profiles/123/batches", self.requests[-1][0])
         self.assertEqual("Bearer native-secret", self.requests[-1][1])

@@ -7,7 +7,7 @@ import re
 import time
 import urllib.request
 from dataclasses import dataclass
-from urllib.parse import quote, urlencode, urlsplit
+from urllib.parse import urlsplit
 
 from . import net
 from .authoring import AuthoringError, _text, identity_text
@@ -77,9 +77,12 @@ def recordings_from_config(config, lookup) -> tuple[Recording, ...]:
     if not lookup.entry.startswith("jmdict:"):
         return ()
     backend = DictionaryBackend(config.get("apiBase", "https://shirabe.org"), config.get("cardToken", ""))
-    path = "/words/" + quote(lookup.lemma or lookup.surface, safe="") + "?" + urlencode({"entry": lookup.entry})
-    detail = backend._request(path)
-    if not isinstance(detail, dict) or f"{detail.get('dictionary')}:{detail.get('sourceId')}" != lookup.entry:
+    identified = backend.identify({"lemma": lookup.lemma or lookup.surface, "surface": lookup.surface,
+                                   "reading": lookup.reading})
+    candidates = identified.get("words", [{}])[0].get("candidates", []) if isinstance(identified, dict) else []
+    detail = next((row for row in candidates
+                   if f"{row.get('dictionary')}:{row.get('sourceId')}" == lookup.entry), None)
+    if not isinstance(detail, dict):
         raise AuthoringError("The recording response does not match the selected entry.")
     pitch = detail.get("pitch", [])
     if not isinstance(pitch, list) or len(pitch) > 32 or any(not isinstance(p, dict) for p in pitch):

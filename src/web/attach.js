@@ -79,7 +79,7 @@
     var link = runtime && runtime.key === key ? runtime.link : ShirabeCard.createLink({
       apiBase: settings.apiBase,
       clientId: settings.clientId,
-      scope: "READ_DICTIONARY READ_SRS READ_ACCOUNT",
+      scope: "user:dictionary:read user:preferences:read user:study:read user:profile:read",
       storage: bridged() ? addonStorage() : undefined,
     });
     if (settings.signIn) return signInPanel(link);

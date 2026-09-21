@@ -37,12 +37,13 @@ class PreparationTests(unittest.TestCase):
                 self.assertEqual([segment["text"] for segment in clean["segments"]], ["食べない"])
 
     def test_parser_inflection_bounds_precede_array_processing_and_missing_metadata_remains_optional(self):
-        class OversizedLabels(list):
+        class OversizedForms(list):
             def __iter__(self):
-                raise AssertionError("Oversized labels must not be walked")
+                raise AssertionError("Oversized forms must not be walked")
         def parsed(text):
             result = parse(text)
-            result["tokens"][0]["inflection"] = {"labels": OversizedLabels(["past"] * 17), "base": "猫"}
+            result["results"][0]["tokens"][0]["inflection"] = {
+                "forms": OversizedForms([{"code": "past", "label": "past"}] * 17), "base": "猫"}
             return result
         limited = prepared(("猫", "犬"), parse=lambda text: parsed(text) if text == "猫" else parse(text))
         self.assertFalse(limited.complete)
@@ -151,31 +152,6 @@ class PreparationTests(unittest.TestCase):
         self.assertEqual(result.issues, ("entry_limit",))
         self.assertFalse(result.complete)
         self.assertEqual([e["dictionary"] for e in result.snapshot["segments"][0]["results"][0]["candidates"][0]["entries"]], ["jmdict"])
-
-    def test_excluded_parser_identity_is_not_retargeted_or_counted_as_prepared(self):
-        def pinned(text):
-            result = parse(text)
-            result["tokens"][0]["entry"] = {"dictionary": "private-upload", "sourceId": "original"}
-            return result
-        result = prepared(("猫",), parse=pinned)
-        segment = result.snapshot["segments"][0]
-        self.assertEqual(segment["tokens"][0]["entry"], "private-upload:original")
-        self.assertEqual(segment["results"][0]["candidates"][0]["dictionary"], "jmdict")
-        self.assertEqual(result.coverage.prepared, 0)
-        self.assertIn("entry_unavailable", result.issues)
-        self.assertFalse(result.complete)
-
-    def test_pinned_approved_candidate_survives_the_candidate_limit(self):
-        def pinned(text):
-            result = parse(text)
-            result["tokens"][0]["entry"] = {"dictionary": "jmdict", "sourceId": "4"}
-            return result
-        candidates = [candidate(source_id=str(i)) for i in range(5)]
-        result = prepared(("猫",), parse=pinned, identify=lambda _: {"words": [{"candidates": candidates}]})
-        self.assertEqual(result.coverage.prepared, 1)
-        self.assertIn("4", [c["sourceId"] for c in result.snapshot["segments"][0]["results"][0]["candidates"]])
-        self.assertEqual(result.issues, ("candidate_limit",))
-        self.assertFalse(result.complete)
 
     def test_loading_partial_candidates_preserves_approved_results_and_marks_incomplete(self):
         snapshot = prepared(("猫",)).snapshot
@@ -348,15 +324,16 @@ class BackendTests(unittest.TestCase):
                 if cls.mode == "large":
                     data = b" " * (offline.MAX_RESPONSE_BYTES + 2)
                 elif urlsplit(self.path).path == "/api/v1/parse":
-                    parsed = parse(body["text"])
-                    if cls.mode == "private_overlay":
-                        parsed["tokens"][0]["entry"] = {"dictionary": "jmdict" if body.get("dictionaries") == ["jmdict"] else "uploaded", "sourceId": "1"}
+                    parsed = parse(body["texts"][0])
                     data = json.dumps(parsed).encode()
                 else:
                     found = identify(body["tokens"][0])
+                    if body.get("include") == ["pitch"]:
+                        found["words"][0]["candidates"][0]["pitch"][0]["audioUrl"] = \
+                            "https://cdn.shirabe.org/audio/words/" + "a" * 64 + ".m4a"
                     if cls.mode == "private_overlay" and body.get("dictionaries") != ["jmdict"]:
                         found["words"][0]["candidates"][0]["entries"].append({"dictionary": "uploaded", "senses": "private" * offline.MAX_RESPONSE_BYTES})
-                    data = json.dumps(found).encode()
+                    data = json.dumps({**found, "stackFingerprint": "dictionary-v1-en-es"}).encode()
                 try:
                     self.wfile.write(data)
                 except (BrokenPipeError, ConnectionResetError):
@@ -369,13 +346,17 @@ class BackendTests(unittest.TestCase):
                     self.end_headers()
                     return
                 if self.path == "/api/v1/me":
-                    data = {"user": {"name": "private"}, "credential": {"scopes": ["READ_DICTIONARY", "READ_ACCOUNT"]},
-                            "preferences": {"uiLocale": "en", "dictionaries": ["uploaded:en", "jmdict:en"],
-                                            "stackFingerprint": "abc123", "languages": ["en"], "stackIsPrivate": True,
-                                            "dictionaryReveal": {"jmdict:en": "show", "uploaded:en": "hover"}}}
+                    data = {"user": {"name": "private"}, "credential": {"scopes": ["user:dictionary:read", "user:account:read"]},
+                            "preferences": {"uiLocale": "en"}}
+                elif self.path == "/api/v1/dictionary-stack":
+                    data = {"dictionaryStack": {"fingerprint": "dictionary-v1-en-es", "sources": [
+                        {"dictionary": "uploaded", "languages": ["en"], "reveal": "hover"},
+                        {"dictionary": "jmdict", "languages": ["en"], "reveal": "show"},
+                    ]}}
                 elif self.path == "/api/v1/dictionaries":
-                    data = {"dictionaries": [{"slug": "uploaded", "name": "Huge custom dictionary", "type": "word",
-                                              "languages": ["en"], "visibility": "personal", "entryCount": 10_000_000}]}
+                    data = {"dictionaries": [{"slug": "uploaded", "name": "Huge custom dictionary", "kind": "definition",
+                                              "languages": ["en"], "visibility": "personal", "entryCount": 10_000_000,
+                                              "capabilities": ["search", "definitions", "offline"], "attribution": None}]}
                     if cls.mode == "missing_count":
                         del data["dictionaries"][0]["entryCount"]
                     elif cls.mode == "null_count":
@@ -410,21 +391,22 @@ class BackendTests(unittest.TestCase):
         backend = offline.DictionaryBackend(self.base, self.credentials, now=lambda: 1000)
         result = prepared(("猫",), parse=backend.parse, identify=backend.identify)
         self.assertTrue(result.complete)
-        self.assertEqual([c[0] for c in self.calls], ["/api/v1/parse?locale=en", "/api/v1/words/identify?locale=en"])
+        self.assertEqual([c[0] for c in self.calls], ["/api/v1/parse", "/api/v1/words/identify"])
         for _, body, headers in self.calls:
             self.assertEqual(headers["Authorization"], "Bearer shra_test")
             self.assertEqual(headers["User-Agent"], offline.net.USER_AGENT)
             self.assertNotIn("shrr", json.dumps(body))
 
-    def test_recording_metadata_get_is_pinned_and_excludes_unselected_uploaded_overlay(self):
+    def test_recording_metadata_identify_is_pinned_and_excludes_unselected_uploaded_overlay(self):
         backend = offline.DictionaryBackend(self.base, self.credentials, now=lambda: 1000, dictionaries=["uploaded", "jmdict"])
         recordings = backend.recordings(candidate())
         self.assertEqual(len(recordings), 1)
         self.assertEqual(recordings[0].reading, "ねこ")
         self.assertEqual(len(self.calls), 1)
         path, body, headers = self.calls[0]
-        self.assertEqual(parse_qs(urlsplit(path).query), {"entry": ["jmdict:1"], "dictionaries": ["jmdict"], "locale": ["en"]})
-        self.assertIsNone(body)
+        self.assertEqual(path, "/api/v1/words/identify")
+        self.assertEqual(body, {"tokens": [{"lemma": "猫", "surface": "猫", "reading": "ネコ"}],
+                                "include": ["pitch"], "dictionaries": ["jmdict"]})
         self.assertEqual(headers["Authorization"], "Bearer shra_test")
         self.assertNotIn("refresh", str(headers))
 
@@ -439,12 +421,14 @@ class BackendTests(unittest.TestCase):
         result = prepared(("猫",), parse=scoped.parse, identify=scoped.identify)
         self.assertTrue(result.complete)
         self.assertEqual(result.snapshot["segments"][0]["tokens"][0]["entry"], "jmdict:1")
-        self.assertEqual([body["dictionaries"] for _, body, _ in self.calls], [["jmdict"], ["jmdict"]])
-        self.assertEqual([path for path, _, _ in self.calls], ["/api/v1/parse?locale=en", "/api/v1/words/identify?locale=en"])
+        self.assertNotIn("dictionaries", self.calls[0][1])
+        self.assertEqual(self.calls[1][1]["dictionaries"], ["jmdict"])
+        self.assertEqual([path for path, _, _ in self.calls], ["/api/v1/parse", "/api/v1/words/identify"])
         self.assertEqual(self.calls[1][1]["include"], ["pitch", "frequency", "furigana", "jlpt", "forms", "notes", "relations"])
         scoped.me()
         scoped.dictionaries()
-        self.assertEqual([(path, body) for path, body, _ in self.calls[-2:]], [("/api/v1/me", None), ("/api/v1/dictionaries", None)])
+        self.assertEqual([(path, body) for path, body, _ in self.calls[-3:]],
+                         [("/api/v1/me", None), ("/api/v1/dictionary-stack", None), ("/api/v1/dictionaries", None)])
 
     def test_dictionary_selection_is_bounded_copied_and_preserves_order(self):
         selection = ["uploaded", "jmdict"]
@@ -452,7 +436,8 @@ class BackendTests(unittest.TestCase):
         selection.reverse()
         backend.parse("猫")
         backend.identify({"lemma": "猫", "surface": "猫"})
-        self.assertEqual([body["dictionaries"] for _, body, _ in self.calls], [["uploaded", "jmdict"], ["uploaded", "jmdict"]])
+        self.assertNotIn("dictionaries", self.calls[0][1])
+        self.assertEqual(self.calls[1][1]["dictionaries"], ["uploaded", "jmdict"])
         for selection in ([], [""], [" "], "jmdict", ["x"] * 129, ["x" * 129], [None]):
             with self.subTest(selection=selection):
                 with self.assertRaises(offline.SnapshotError):
@@ -462,7 +447,7 @@ class BackendTests(unittest.TestCase):
         backend = offline.DictionaryBackend(self.base, self.credentials, locale="es", dictionaries=["jmdict"], now=lambda: 1000)
         backend.parse("猫")
         backend.identify({"surface": "猫", "lemma": "猫"})
-        self.assertEqual([path for path, _, _ in self.calls], ["/api/v1/parse?locale=es", "/api/v1/words/identify?locale=es"])
+        self.assertEqual([path for path, _, _ in self.calls], ["/api/v1/parse", "/api/v1/words/identify"])
         self.assertTrue(all("locale" not in body for _, body, _ in self.calls))
 
     def test_size_cap_redirect_and_expired_malformed_credentials(self):
@@ -485,13 +470,14 @@ class BackendTests(unittest.TestCase):
         slots = json.dumps({"shirabe.link": self.credentials, "shirabe.pending": "private"})
         backend = offline.DictionaryBackend(self.base, slots, now=lambda: 1000)
         me = backend.me()
-        self.assertEqual(me["preferences"]["stackFingerprint"], "abc123")
-        self.assertEqual(me["preferences"]["dictionaryReveal"], {"jmdict:en": "show", "uploaded:en": "hover"})
-        self.assertEqual(me["credential"]["scopes"], ["READ_DICTIONARY", "READ_ACCOUNT"])
+        self.assertEqual(me["preferences"]["stackFingerprint"], "dictionary-v1-en-es")
+        self.assertEqual(me["preferences"]["dictionaryReveal"], {"uploaded": "hover", "jmdict": "show"})
+        self.assertEqual(me["credential"]["scopes"], ["user:dictionary:read", "user:account:read"])
         self.assertNotIn("user", me)
         dictionaries = backend.dictionaries()["dictionaries"]
         self.assertEqual(dictionaries[0]["entryCount"], 10_000_000)
-        self.assertEqual([call[0] for call in self.calls], ["/api/v1/me", "/api/v1/dictionaries"])
+        self.assertEqual([call[0] for call in self.calls],
+                         ["/api/v1/me", "/api/v1/dictionary-stack", "/api/v1/dictionaries"])
         type(self).mode = "denied"
         with self.assertRaises(offline.SnapshotError) as raised:
             backend.me()

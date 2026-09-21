@@ -31,7 +31,7 @@ class NoRedirects(urllib.request.HTTPRedirectHandler):
 
 class SyncClient:
     CLIENT_ID = "shirabe-anki-sync"
-    SCOPES = "READ_SRS WRITE_SRS"
+    SCOPES = "user:study:read user:study:write"
     MAX_RESPONSE_BYTES = 8 * 1024 * 1024
     MAX_MEDIA_BYTES = 20 * 1024 * 1024
 

@@ -17,7 +17,7 @@ ACCESS = "phase0-access-only-dummy"
 REFRESH = "phase0-refresh-only-dummy"
 DEVICE = "phase0-device-code-only-dummy"
 CODE = "PHASE0"
-SCOPES = {"READ_ACCOUNT", "READ_DICTIONARY", "READ_SRS"}
+SCOPES = {"user:account:read", "user:dictionary:read", "user:study:read"}
 
 
 def serve(root):
@@ -103,10 +103,13 @@ def serve(root):
             elif path.startswith("/api/v1/") and self.headers.get("Authorization") != "Bearer " + ACCESS:
                 self.respond({"title": "Dummy fixture token required"}, 401)
             elif path == "/api/v1/me":
-                self.respond({"credential": {"scopes": state["scope"]}, "preferences": {
-                    "languages": ["en"], "uiLocale": "en", "dictionaries": ["jmdict"], "stackFingerprint": "phase0-oauth"}})
+                self.respond({"credential": {"scopes": state["scope"]}, "preferences": {"uiLocale": "en"}})
+            elif path == "/api/v1/dictionary-stack":
+                self.respond({"dictionaryStack": {"fingerprint": "phase0-oauth", "sources": [
+                    {"dictionary": "jmdict", "languages": ["en"], "reveal": "show"},
+                ]}})
             elif path == "/api/v1/parse":
-                self.respond(parse(data["text"]))
+                self.respond(parse(data["texts"][0]))
             elif path == "/api/v1/words/identify":
                 self.respond({"words": [{"candidates": [candidate(token.get("lemma") or token.get("surface") or "猫")]} for token in data["tokens"]]})
             elif path == "/api/v1/srs/states/lookup":

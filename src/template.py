@@ -71,7 +71,7 @@ def block(api_base: str, client_id: str, trigger: str, online_parsing: bool = Fa
       if (window.__shirabe || window.__shirabeNativeRender) return;
       window.ShirabeCard.attach({{
         api: {{ apiBase: {script_json(api_base)} }},
-        link: {{ clientId: {script_json(client_id)}, scope: "READ_DICTIONARY READ_SRS READ_ACCOUNT" }},
+        link: {{ clientId: {script_json(client_id)}, scope: "user:dictionary:read user:preferences:read user:study:read user:profile:read" }},
         parse: {script_json(online_parsing is True)},
         trigger: {script_json(trigger)},
         canWrite: false

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-from urllib.parse import quote
-
 from .authoring import AuthoringError, Example, Lookup
 
 
@@ -11,8 +9,8 @@ def search_examples(fetch_json, lookup: Lookup, *, language="en", min_length=1, 
                     take=20, cancelled=lambda: False) -> tuple[Example, ...]:
     """fetch_json(path, params) runs off the UI thread and enforces its timeout.
 
-    At most two requests are made. A selected entry stays pinned in both;
-    without one, the corpus uses the surface. The current note is not uploaded.
+    One request is made. A selected word pins the corpus search; without one,
+    the corpus uses the surface. The current note is not uploaded.
     """
     if language not in {"en", "es", "fr", "de", "pt", "ru", "nl", "hu", "sv", "ja"}:
         raise AuthoringError("Unsupported translation language.")
@@ -21,14 +19,12 @@ def search_examples(fetch_json, lookup: Lookup, *, language="en", min_length=1, 
     languages = {"en": "eng", "es": "spa", "fr": "fra", "de": "deu", "pt": "por", "ru": "rus",
                  "nl": "nld", "hu": "hun", "sv": "swe", "ja": "jpn"}
     requests = []
-    if lookup.entry:
-        requests.append(("/api/v1/words/" + quote(lookup.lemma or lookup.surface, safe=""),
-                         {"entry": lookup.entry, "include": "examples", "locale": language}, "examples"))
     surface = lookup.surface or lookup.lemma
     if 0 < len(surface) <= 64:
-        params = {"query": surface, "take": take, "locale": language}
-        if lookup.entry:
-            params["entry"] = lookup.entry
+        params = {"query": surface, "limit": take}
+        if lookup.word_id:
+            params["filter[wordId]"] = lookup.word_id
+        params["filter[translationLanguages][]"] = language
         requests.append(("/api/v1/sentences", params, "sentences"))
     result, seen = [], set()
     for path, params, key in requests:
@@ -52,7 +48,9 @@ def search_examples(fetch_json, lookup: Lookup, *, language="en", min_length=1, 
             if not translation and language != "ja":
                 continue
             reference = row.get("id", "")
-            source = row.get("source") or ("Tatoeba" if reference.startswith("tatoeba:") else reference.partition(":")[0])
+            source_data = row.get("source")
+            source = source_data.get("name", "") if isinstance(source_data, dict) else source_data
+            source = source or ("Tatoeba" if reference.startswith("tatoeba:") else reference.partition(":")[0])
             example = Example(japanese, translation, source, reference, language if translation else "")
             identity = (japanese, translation)
             if identity not in seen:
@@ -70,6 +68,7 @@ def search_examples_from_config(config, lookup, *, language=None, max_length=120
     backend = DictionaryBackend(config.get("apiBase", "https://shirabe.org"), config.get("cardToken", ""))
     preferences = backend.me()["preferences"]
     language = language or next(iter(preferences.get("languages") or ["en"]))
+    backend._locale = language
     def fetch(path, params):
         return backend._request(path.removeprefix("/api/v1") + "?" + urlencode(params))
     return search_examples(fetch, lookup, language=language, max_length=max_length, cancelled=cancelled)
