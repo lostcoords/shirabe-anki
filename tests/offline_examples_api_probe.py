@@ -41,5 +41,5 @@ assert len(batch.rows) == 1 and not batch.issue_notes, batch
 item = batch.rows[0][1]
 assert item.requests == 3 and item.complete
 assert offline.validate_snapshot(item.snapshot) == item.snapshot
-assert calls == [("GET", "/me"), ("GET", "/dictionary-stack"), ("GET", "/dictionaries"), ("POST", "/parse"), ("POST", "/words/identify"), ("GET", "/sentences")], calls
+assert calls == [("GET", "/me"), ("GET", "/preferences"), ("GET", "/dictionary-stack"), ("GET", "/dictionaries"), ("POST", "/parse"), ("POST", "/words/identify"), ("GET", "/sentences")], calls
 print(json.dumps({"snapshot": item.snapshot}, ensure_ascii=False))

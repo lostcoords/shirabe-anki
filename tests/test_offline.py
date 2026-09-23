@@ -346,8 +346,9 @@ class BackendTests(unittest.TestCase):
                     self.end_headers()
                     return
                 if self.path == "/api/v1/me":
-                    data = {"user": {"name": "private"}, "credential": {"scopes": ["user:dictionary:read", "user:account:read"]},
-                            "preferences": {"uiLocale": "en"}}
+                    data = {"user": {"name": "private"}, "credential": {"scopes": ["user:dictionary:read", "user:account:read"]}}
+                elif self.path == "/api/v1/preferences":
+                    data = {"preferences": {"uiLocale": "en"}}
                 elif self.path == "/api/v1/dictionary-stack":
                     data = {"dictionaryStack": {"fingerprint": "dictionary-v1-en-es", "sources": [
                         {"dictionary": "uploaded", "languages": ["en"], "reveal": "hover"},
@@ -428,7 +429,7 @@ class BackendTests(unittest.TestCase):
         scoped.me()
         scoped.dictionaries()
         self.assertEqual([(path, body) for path, body, _ in self.calls[-3:]],
-                         [("/api/v1/me", None), ("/api/v1/dictionary-stack", None), ("/api/v1/dictionaries", None)])
+                         [("/api/v1/preferences", None), ("/api/v1/dictionary-stack", None), ("/api/v1/dictionaries", None)])
 
     def test_dictionary_selection_is_bounded_copied_and_preserves_order(self):
         selection = ["uploaded", "jmdict"]
@@ -477,7 +478,7 @@ class BackendTests(unittest.TestCase):
         dictionaries = backend.dictionaries()["dictionaries"]
         self.assertEqual(dictionaries[0]["entryCount"], 10_000_000)
         self.assertEqual([call[0] for call in self.calls],
-                         ["/api/v1/me", "/api/v1/dictionary-stack", "/api/v1/dictionaries"])
+                         ["/api/v1/me", "/api/v1/preferences", "/api/v1/dictionary-stack", "/api/v1/dictionaries"])
         type(self).mode = "denied"
         with self.assertRaises(offline.SnapshotError) as raised:
             backend.me()

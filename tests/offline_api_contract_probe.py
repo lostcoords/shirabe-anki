@@ -19,7 +19,7 @@ class CapturedResponses:
         body = json.loads(request.data) if request.data else None
         if body is not None:
             assert not parse_qs(urlsplit(request.full_url).query)
-            assert request.headers["Accept-language"] == captured["/me"]["preferences"]["uiLocale"]
+            assert request.headers["Accept-language"] == captured["/preferences"]["preferences"]["uiLocale"]
             if path == "/parse":
                 assert body == {"texts": [text]}
             else:
@@ -63,7 +63,7 @@ for raw, token in zip(captured["/parse"]["results"][0]["tokens"], snapshot["segm
 assert snapshot["preferences"]["dictionaryReveal"] == preferences["dictionaryReveal"]
 assert next(item for item in snapshot["sources"] if item["slug"] == "jmdict")["source"]["license"] == "EDRDG"
 assert next(item for item in snapshot["sources"] if item["slug"] == "personal-cat")["attribution"] == "Fixture attribution"
-assert calls == [("GET", "/me"), ("GET", "/dictionary-stack"), ("GET", "/dictionaries"),
+assert calls == [("GET", "/me"), ("GET", "/preferences"), ("GET", "/dictionary-stack"), ("GET", "/dictionaries"),
                  ("POST", "/parse"), ("POST", "/words/identify"), ("POST", "/parse")], calls
 for reason, changed in captured.get("drift", {}).items():
     source = backend(locale=preferences["uiLocale"], dictionaries=selection, stack_fingerprint=preferences["stackFingerprint"])
