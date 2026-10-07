@@ -5,7 +5,7 @@ import { createRequire } from "node:module";
 import { createInterface } from "node:readline";
 import { pathToFileURL } from "node:url";
 
-const require = createRequire(new URL("../../packages/card/package.json", import.meta.url));
+const require = createRequire(new URL("../../package.json", import.meta.url));
 const { Window } = await import(pathToFileURL(require.resolve("happy-dom")).href);
 const window = new Window({ url: "https://fixture.invalid/" });
 window.TextDecoder = TextDecoder;

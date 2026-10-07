@@ -1,10 +1,8 @@
 import assert from "node:assert/strict";
-import { build } from "esbuild";
 import { Window } from "happy-dom";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
-import { fileURLToPath } from "node:url";
 
 const args = process.argv.slice(2);
 if (args.length && (args.length !== 2 || args[0] !== "--bundle" || !args[1])) {
@@ -49,24 +47,17 @@ try {
     artifact = { sdk_input: "built-standalone", bundle_path: bundlePath,
       bundle_sha256: createHash("sha256").update(bytes).digest("hex") };
   } else {
-    const built = await build({
-      stdin: {
-        contents: 'export * as card from "./src/word-card/card.ts"; export { snapshotHost, validateSnapshot } from "./src/word-card/snapshot-host.ts";',
-        resolveDir: fileURLToPath(new URL("../../packages/card/", import.meta.url)),
-      },
-      bundle: true, write: false, platform: "node", format: "esm", logLevel: "silent",
-    });
-    const sdk = await import(`data:text/javascript;base64,${Buffer.from(built.outputFiles[0].text).toString("base64")}`);
-    ({ snapshotHost, validateSnapshot } = sdk);
+    const sdk = { card: await import("@shirabe-org/card/word-card/card") };
+    ({ snapshotHost, validateSnapshot } = await import("@shirabe-org/card/word-card/snapshot-host"));
     open = (host, word) => {
       sdk.card.setCardHost(host);
       sdk.card.setWriteState({ canWrite: false, connected: false, readOnly: true, languages: ["jpn", "eng"] });
       sdk.card.showNow(word);
     };
     close = () => sdk.card.dismissPopup();
-    artifact = { sdk_input: "current-typescript-not-built-addon",
-      source_sha256: Object.fromEntries(["card.ts", "api-host.ts", "snapshot-host.ts"].map(name => [name,
-        createHash("sha256").update(readFileSync(new URL(`../../packages/card/src/word-card/${name}`, import.meta.url))).digest("hex")])) };
+    artifact = { sdk_input: "released-modules",
+      source_sha256: Object.fromEntries(["card", "api-host", "snapshot-host"].map(name => [name,
+        createHash("sha256").update(readFileSync(new URL(import.meta.resolve(`@shirabe-org/card/word-card/${name}`)))).digest("hex")])) };
     assert.deepEqual(validateSnapshot(snapshot), snapshot, "The SDK must preserve the Python snapshot exactly");
   }
   const host = snapshotHost(undefined, snapshot, {

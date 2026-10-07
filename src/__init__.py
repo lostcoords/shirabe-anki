@@ -1,7 +1,7 @@
 """Shirabe for Anki: the dictionary card, on every card you review.
 
 What this file is: the seams Anki gives an add-on, and nothing else. The card is
-`packages/card`, bundled into `web/`; the reader's own words come from
+the released `@shirabe-org/card` package, copied into `web/`; the reader's own words come from
 `collection.py`; the HTML rewrite is `inject.py`; the note type a phone reads is
 `template.py`.
 

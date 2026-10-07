@@ -137,13 +137,15 @@ class SigningIn(unittest.TestCase):
 
 
 class Naming(unittest.TestCase):
-    def test_both_places_anki_reads_a_name_from_agree(self):
-        # `manifest.json` names a packaged add-on; `meta.json` names an installed
-        # one. Two names is two names in the wild.
+    def test_packaged_name_says_where_it_comes_from(self):
+        manifest = json.loads((SRC / "manifest.json").read_text())
+        self.assertIn("shirabe.org", manifest["name"], "the name says where it comes from")
+
+    @unittest.skipUnless((SRC / "meta.json").exists(), "requires installed Anki add-on metadata")
+    def test_installed_name_matches_the_packaged_name(self):
         manifest = json.loads((SRC / "manifest.json").read_text())
         meta = json.loads((SRC / "meta.json").read_text())
         self.assertEqual(manifest["name"], meta["name"])
-        self.assertIn("shirabe.org", manifest["name"], "the name says where it comes from")
 
 
 class Triggers(unittest.TestCase):

@@ -1,0 +1,29 @@
+<!--
+  An Anki card template, whole.
+
+  Copy the two script tags into the BACK template of a note type whose field
+  holds Japanese already wrapped in `.sb-word` spans (a note generator, or
+  `POST /api/v1/parse`, produces those). Nothing here needs a build step, and
+  the file is loaded from file:// inside Anki's webview, which is why the
+  bundle is an IIFE rather than a module.
+-->
+<style>
+  .card { font-family: -apple-system, sans-serif; font-size: 28px; text-align: center; padding: 40px 20px; }
+</style>
+
+<div class="card">
+  <div id="sentence" lang="ja">
+    <span class="sb-word" data-lemma="猫" data-surface="猫" data-state="none">猫</span>が<span class="sb-word" data-lemma="窓" data-surface="窓" data-state="none">窓</span>に<span class="sb-word" data-lemma="座る" data-surface="座る" data-state="none">座る</span>。
+  </div>
+</div>
+
+<script src="https://cdn.shirabe.org/card/v1/shirabe-card.js"></script>
+<script>
+  ShirabeCard.attach({
+    root: document.getElementById("sentence"),
+    // A key is per reader and never per deck: a shared deck carrying one would
+    // hand every downloader the same account.
+    api: { apiBase: "https://shirabe.org", token: localStorage.getItem("shirabeKey") || undefined },
+    canWrite: !!localStorage.getItem("shirabeKey"),
+  });
+</script>

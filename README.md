@@ -222,7 +222,7 @@ signed out. Keep a backup if you need older snapshots for an undone change.
 From the repository root, build the add-on's shared popup:
 
 ```sh
-npm --prefix packages/card run build:anki
+npm run sdk:assets -- anki
 python3 anki-addon/tests/run.py
 ```
 
@@ -231,8 +231,9 @@ pinned Anki runtime to exercise collection and Qt tests. Use the isolated-profil
 [Desktop runner](tests/desktop_check.py) and
 [fixture deck generator](tests/fixture_deck.py) for client verification.
 
-For continuous builds, run `npm --prefix packages/card run watch:anki`. Restart
-Anki after changing Python or to load a rebuilt bundle into an existing reviewer.
+The renderer comes from the installed `@shirabe-org/card` release. After upgrading
+it, copy the bundle again. Restart Anki after changing Python or loading a new
+bundle into an existing reviewer.
 Use an isolated test profile, not a real study collection.
 
 For a local API, set **Settings → Advanced → Server** to the Rails server's

@@ -656,7 +656,7 @@ The first `e849eb7c` run stopped at the harness's former requirement that a nati
 study reply precede the visible definition. The runner now records the definition
 timestamp first, then separately requires the native reply and validates its
 payload. The successful `-final` run above uses that corrected measurement.
-The SDK regression in `packages/card/test/standalone.test.ts` holds the online study request
+The SDK regression in [the archived standalone test](https://github.com/lostcoords/shirabe-sdk/blob/5fa016442c426b9444bad27ce2d3ad2e80e31d91/packages/card/test/standalone.test.ts) holds the online study request
 unresolved while requiring the prepared `cat` definition to be visible; the
 authoring suite checks that a later reply preserves selected fields and focus,
 and cannot paint a dismissed popup. Both tests failed before the renderer fix.
@@ -761,8 +761,8 @@ Its report is
 No source or bundle edits accompanied this verification.
 
 ```sh
-node packages/card/test/attach-browser.mjs --sdk-bundle anki-addon/src/web/shirabe-card.js
-node packages/card/test/attach-browser.mjs --check-performance-report /var/folders/b0/ggkwwpj56nx_kntnkyr5w3p80000gn/T/shirabe-attach-browser-HT8r3R/report.json
+node packages/card/test/attach-browser.mjs --sdk-bundle anki-addon/src/web/shirabe-card.js # archived source: https://github.com/lostcoords/shirabe-sdk/blob/5fa016442c426b9444bad27ce2d3ad2e80e31d91/packages/card/test/attach-browser.mjs
+node packages/card/test/attach-browser.mjs --check-performance-report /var/folders/b0/ggkwwpj56nx_kntnkyr5w3p80000gn/T/shirabe-attach-browser-HT8r3R/report.json # archived source: https://github.com/lostcoords/shirabe-sdk/blob/5fa016442c426b9444bad27ce2d3ad2e80e31d91/packages/card/test/attach-browser.mjs
 npm --prefix packages/card test
 npm --prefix packages/card run check
 ```
@@ -816,8 +816,8 @@ The rerun commands, from the repository root, are:
 
 ```sh
 shasum -a 256 anki-addon/src/web/shirabe-card.js app/assets/javascripts/shirabe-card.js
-node packages/card/test/attach-browser.mjs --sdk-bundle anki-addon/src/web/shirabe-card.js
-node packages/card/test/attach-browser.mjs --check-performance-report /var/folders/b0/ggkwwpj56nx_kntnkyr5w3p80000gn/T/shirabe-attach-browser-OxXyP5/report.json
+node packages/card/test/attach-browser.mjs --sdk-bundle anki-addon/src/web/shirabe-card.js # archived source: https://github.com/lostcoords/shirabe-sdk/blob/5fa016442c426b9444bad27ce2d3ad2e80e31d91/packages/card/test/attach-browser.mjs
+node packages/card/test/attach-browser.mjs --check-performance-report /var/folders/b0/ggkwwpj56nx_kntnkyr5w3p80000gn/T/shirabe-attach-browser-OxXyP5/report.json # archived source: https://github.com/lostcoords/shirabe-sdk/blob/5fa016442c426b9444bad27ce2d3ad2e80e31d91/packages/card/test/attach-browser.mjs
 ```
 
 The harness prints a new artifact directory for each run. `--sdk-bundle` reads
@@ -882,7 +882,7 @@ and three further GC samples after each SDK and control series. Its report is
 The test-only options leave the default 300-flip diagnostic unchanged.
 
 ```sh
-node packages/card/test/attach-browser.mjs --sdk-bundle anki-addon/src/web/shirabe-card.js --memory-flips 1000 --memory-settle-ms 15000
+node packages/card/test/attach-browser.mjs --sdk-bundle anki-addon/src/web/shirabe-card.js --memory-flips 1000 --memory-settle-ms 15000 # archived source: https://github.com/lostcoords/shirabe-sdk/blob/5fa016442c426b9444bad27ce2d3ad2e80e31d91/packages/card/test/attach-browser.mjs
 ```
 
 These are JS heap growth bytes relative to each series' post-warm-up baseline:

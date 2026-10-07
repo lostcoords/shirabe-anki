@@ -195,7 +195,7 @@ class RichContentTests(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr[-3000:])
         report = json.loads(result.stdout)
         self.assertEqual(report["network_calls"], 0)
-        self.assertEqual(report["sdk_input"], "current-typescript-not-built-addon")
+        self.assertEqual(report["sdk_input"], "released-modules")
 
     def test_sdk_probe_accepts_the_complete_public_contract_without_python_projection(self):
         snapshot = prepare_rich().snapshot

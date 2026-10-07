@@ -93,9 +93,9 @@ print("native consent passed")
 
     @unittest.skipUnless(anki_python(), "Installed Anki Python required")
     def test_real_webengine_capture_preserves_visible_runs_without_deck_requests(self):
-        sdk = Path(__file__).resolve().parents[2] / "packages/card"
+        sdk = Path(__file__).resolve().parents[2]
         build = '''import {build} from "esbuild";
-const result=await build({stdin:{contents:`import {collectReadableRuns} from "./src/word-card/wrap.ts";globalThis.ShirabeCard={collectReadableRuns};`,resolveDir:process.cwd()},bundle:true,format:"iife",write:false});
+const result=await build({stdin:{contents:`import {collectReadableRuns} from "@shirabe-org/card/word-card/wrap";globalThis.ShirabeCard={collectReadableRuns};`,resolveDir:process.cwd()},bundle:true,format:"iife",write:false});
 process.stdout.write(result.outputFiles[0].text);'''
         bundle = subprocess.run(["node", "--input-type=module", "-e", build],
                                 cwd=sdk, capture_output=True, text=True)
