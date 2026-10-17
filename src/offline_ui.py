@@ -414,7 +414,7 @@ def review_cleanup(parent, on_done=lambda: None):
 
 def _consent(parent, count, dictionaries, usage, config):
     from aqt.operations import QueryOp
-    from aqt.qt import QCheckBox, QDialog, QDialogButtonBox, QFrame, QLabel, QPushButton, QScrollArea, QSpinBox, QToolButton, QVBoxLayout, QWidget, Qt
+    from aqt.qt import QCheckBox, QDialog, QDialogButtonBox, QFrame, QLabel, QPushButton, QScrollArea, QSpinBox, QToolButton, QVBoxLayout, QWidget, QLayout, Qt
 
     dialog = QDialog(parent)
     dialog.setWindowTitle("Prepare for offline lookup")
@@ -503,7 +503,13 @@ def _consent(parent, count, dictionaries, usage, config):
     scroll.setObjectName("shirabe-dictionaries")
     scroll.setWidgetResizable(True)
     inner = QWidget()
+    class PermissionNotice(QLabel):
+        def resizeEvent(self, event):
+            super().resizeEvent(event)
+            self.setMinimumHeight(self.heightForWidth(event.size().width()))
+
     choices = QVBoxLayout(inner)
+    choices.setSizeConstraint(QLayout.SizeConstraint.SetMinAndMaxSize)
     boxes = []
     for dictionary in dictionaries:
         if dictionary.get("type") == "sentence":
@@ -517,11 +523,10 @@ def _consent(parent, count, dictionaries, usage, config):
         box.setChecked(official)
         boxes.append((dictionary["slug"], box))
         choices.addWidget(box)
-        notice = QLabel((f"License: {source.get('license', 'not provided')}. {source.get('licenseUrl', '')}" if official else
+        notice = PermissionNotice((f"License: {source.get('license', 'not provided')}. {source.get('licenseUrl', '')}" if official else
                          "Select only if you may copy its excerpts into synced or exported decks."))
         notice.setTextFormat(Qt.TextFormat.PlainText)
         notice.setWordWrap(True)
-        notice.setMinimumHeight(notice.fontMetrics().height() * 3)
         choices.addWidget(notice)
     scroll.setWidget(inner)
     choices.setAlignment(Qt.AlignmentFlag.AlignTop)

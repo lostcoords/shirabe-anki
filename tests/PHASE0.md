@@ -1,5 +1,9 @@
 # Real-client harness reference
 
+This record was captured in the Shirabe monorepo. Its paths and commands refer
+to that checkout. See [the current development commands](../README.md#develop-and-verify)
+for the standalone add-on.
+
 These scripts use installed Anki, not a collection mock. Each desktop run creates
 a new directory under ignored `tmp/anki-phase0-*`. They never open the default
 Anki profile. Keep the directory printed by a run to retain its evidence.

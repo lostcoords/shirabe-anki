@@ -149,14 +149,14 @@ class SyncMediaTest(unittest.TestCase):
 
     def test_remote_new_files_and_replacements_use_anki_media_and_keep_original_references(self):
         self.server.replace("cat.mp3", b"Shirabe replacement")
-        self.server.replace("_Remote.png", b"new image")
+        self.server.replace("_remote.png", b"new image")
         with patch.object(self.collection.media, "write_data", wraps=self.collection.media.write_data) as write, \
              patch.object(self.collection.media, "trash_files", wraps=self.collection.media.trash_files) as trash:
             self.assertEqual(2, self.cycle())
             self.assertEqual(2, write.call_count)
             trash.assert_called_once_with(["cat.mp3"])
         self.assertEqual(b"Shirabe replacement", self.live().read_bytes())
-        self.assertEqual(b"new image", self.live("_Remote.png").read_bytes())
+        self.assertEqual(b"new image", self.live("_remote.png").read_bytes())
         self.assertEqual(0, self.cycle())
         self.assertEqual(1, len(self.server.media_requests))
 
