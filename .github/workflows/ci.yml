@@ -24,6 +24,7 @@ jobs:
       - uses: astral-sh/setup-uv@v7
       - run: sudo apt-get update && sudo apt-get install --yes libegl1 libxkbcommon-x11-0 libxcb-cursor0
       - run: npm ci
+      - run: npm audit --audit-level=high --omit=dev
       - run: npm run build
       - run: npm run check
       - run: npm test
