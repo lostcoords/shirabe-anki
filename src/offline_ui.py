@@ -521,7 +521,7 @@ def _consent(parent, count, dictionaries, usage, config):
                          "Select only if you may copy its excerpts into synced or exported decks."))
         notice.setTextFormat(Qt.TextFormat.PlainText)
         notice.setWordWrap(True)
-        notice.setMinimumHeight(notice.fontMetrics().lineSpacing() * 3)
+        notice.setMinimumHeight(notice.fontMetrics().height() * 3)
         choices.addWidget(notice)
     scroll.setWidget(inner)
     choices.setAlignment(Qt.AlignmentFlag.AlignTop)
