@@ -102,7 +102,7 @@ class AllocationReplayTests(unittest.TestCase):
     @unittest.skipUnless(shutil.which("node"), "Node required for windowless SDK probe")
     def test_sdk_probe_resolves_repeated_unpinned_words_with_partial_alternatives(self):
         root = Path(__file__).resolve().parents[1]
-        bundle = root / "src/web/shirabe-card.js"
+        bundle = root / "addon/src/web/shirabe-card.js"
         before = snapshot()
         segment = before["segments"][0]
         segment["text"] = "猫猫"

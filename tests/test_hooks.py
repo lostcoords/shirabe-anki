@@ -32,7 +32,7 @@ class NativeHooks(unittest.TestCase):
         self.unload_profile = lambda onsuccess: self.original_unload(onsuccess)
         self.mw.unloadProfile = self.unload_profile
         name = "shirabe_addon.hooks_probe"
-        path = Path(__file__).resolve().parents[1] / "src" / "__init__.py"
+        path = Path(__file__).resolve().parents[1] / "addon/src" / "__init__.py"
         spec = importlib.util.spec_from_loader(name, SourceFileLoader(name, str(path)), is_package=False)
         self.hooks = importlib.util.module_from_spec(spec)
         with patch("aqt.mw", self.mw), patch("aqt.gui_hooks", hooks):

@@ -61,7 +61,7 @@ class ReleasePackage(unittest.TestCase):
         def fixture():
             return Collection().add_note(object(), 1)
 
-        bundle = Path(runner.__file__).resolve().parents[1] / 'src/web/shirabe-card.js'
+        bundle = Path(runner.__file__).resolve().parents[1] / 'addon/src/web/shirabe-card.js'
         argv = [runner.__file__, '--bundle-sha256', hashlib.sha256(bundle.read_bytes()).hexdigest()]
         with patch.object(sys, 'argv', argv), \
                 patch.dict(sys.modules, {'anki.collection': SimpleNamespace(Collection=Collection), 'aqt': SimpleNamespace()}), \

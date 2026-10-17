@@ -14,7 +14,7 @@ let networkAttempts = 0;
 const forbidden = async () => { networkAttempts++; throw new Error("Network forbidden"); };
 window.fetch = forbidden;
 globalThis.fetch = forbidden;
-const bundle = readFileSync(new URL("../src/web/shirabe-card.js", import.meta.url));
+const bundle = readFileSync(new URL("../addon/src/web/shirabe-card.js", import.meta.url));
 const bundleHash = createHash("sha256").update(bundle).digest("hex");
 assert.equal(bundleHash, process.argv[2], "SDK bundle differs from frozen input");
 window.eval(bundle.toString());

@@ -94,7 +94,7 @@ def fixture_api():
 
 
 def package(root):
-    source = HERE.parent / "src"
+    source = HERE.parent / "addon/src"
     defaults = json.loads((source / "config.json").read_text())
     if any(defaults.get(key) for key in ("cardToken", "accessToken", "refreshToken", "installId")):
         raise ValueError("Refusing to package runtime credentials or installation identity in defaults")

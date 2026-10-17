@@ -15,7 +15,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent.parent / "src"
+SRC = Path(__file__).resolve().parent.parent / "addon/src"
 
 def anki_python() -> Path | None:
     return Path(sys.executable) if importlib.util.find_spec("anki") else None

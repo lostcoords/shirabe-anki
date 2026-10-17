@@ -174,7 +174,7 @@ class WithoutPython(unittest.TestCase):
     """
 
     def test_the_bridge_is_checked_before_it_is_used(self):
-        source = (Path(__file__).resolve().parent.parent / "src" / "web" / "attach.js").read_text()
+        source = (Path(__file__).resolve().parent.parent / "addon/src" / "web" / "attach.js").read_text()
         self.assertIn("typeof pycmd === \"function\"", source)
         # Every call site goes through the check rather than trusting it once.
         for call in ("shirabe:report:", "shirabe:states:"):
@@ -186,14 +186,14 @@ class WithoutPython(unittest.TestCase):
         # is the SDK's job (`attach` strips what `canWrite: false` denies, and
         # its own suite proves the card then draws neither the buttons nor an
         # upgrade offer); saying so is this file's.
-        source = (Path(__file__).resolve().parent.parent / "src" / "web" / "attach.js").read_text()
+        source = (Path(__file__).resolve().parent.parent / "addon/src" / "web" / "attach.js").read_text()
         self.assertIn("canWrite: false", source)
         self.assertNotIn("canWrite: true", source)
 
     def test_a_bridge_that_never_answers_gives_up_rather_than_hanging(self):
         # The page paint waits on this promise; unsettled, the words never
         # colour and nothing says why.
-        source = (Path(__file__).resolve().parent.parent / "src" / "web" / "attach.js").read_text()
+        source = (Path(__file__).resolve().parent.parent / "addon/src" / "web" / "attach.js").read_text()
         self.assertIn("setTimeout(function () { give(null); }", source)
 
 
@@ -326,7 +326,7 @@ class SignInSurvivesARestart(unittest.TestCase):
         self.assertIn('"stored": ""', inject.with_card("<div>猫</div>", {}, "/w"))
 
     def test_the_card_asks_python_to_keep_it_rather_than_the_browser(self):
-        source = (Path(__file__).resolve().parent.parent / "src" / "web" / "attach.js").read_text()
+        source = (Path(__file__).resolve().parent.parent / "addon/src" / "web" / "attach.js").read_text()
         self.assertIn("shirabe:store:", source)
         # Only where there is a Python to ask. A phone's webview has a stable
         # origin and keeps its own.

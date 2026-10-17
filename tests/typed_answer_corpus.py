@@ -57,7 +57,7 @@ if __name__ == "__main__":
     root = Path(tempfile.mkdtemp(prefix="anki-typed-", dir=REPO / "tmp"))
     print(f"Artifacts: {root}", flush=True)
     build(root)
-    compiled = subprocess.run(["npm", "run", "build", "--workspace", "@shirabe-org/study-runtime"], cwd=SHIRABE)
+    compiled = subprocess.run(["npm", "run", "build", "--workspace", "@shirabe-org/anki-runtime"], cwd=REPO)
     if compiled.returncode:
         sys.exit(compiled.returncode)
     result = subprocess.run(["node", str(Path(__file__).with_name("typed_answer_browser.mjs")), str(root)], cwd=SHIRABE)

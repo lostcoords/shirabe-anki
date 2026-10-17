@@ -46,7 +46,7 @@ def candidate(manifest_path: Path) -> tuple[dict, Path]:
 
 
 def addon_package(root: Path) -> Path:
-    source = Path(__file__).resolve().parents[1] / "src"
+    source = Path(__file__).resolve().parents[1] / "addon/src"
     defaults = json.loads((source / "config.json").read_text())
     if any(defaults.get(key) for key in ("cardToken", "accessToken", "refreshToken", "installId")):
         raise ValueError("Refusing to package runtime credentials or installation identity in defaults")

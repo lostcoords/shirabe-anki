@@ -3,7 +3,7 @@ import test from "node:test";
 import { readFileSync } from "node:fs";
 import { Window } from "happy-dom";
 
-const source = readFileSync("../../src/web/attach.js", "utf8");
+const source = readFileSync("../../addon/src/web/attach.js", "utf8");
 
 function bootstrap(android?: unknown) {
   const window = new Window();

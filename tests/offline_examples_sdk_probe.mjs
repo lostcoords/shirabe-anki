@@ -12,7 +12,7 @@ window.TextEncoder = TextEncoder;
 window.Blob = Blob;
 window.DecompressionStream = DecompressionStream;
 window.fetch = async () => { throw new Error("Offline lookup must not request the network"); };
-const bundle = readFileSync(new URL("../src/web/shirabe-card.js", import.meta.url));
+const bundle = readFileSync(new URL("../addon/src/web/shirabe-card.js", import.meta.url));
 window.eval(bundle.toString());
 const api = window.ShirabeCard;
 const { snapshot, expectedExamples, media } = JSON.parse(readFileSync(0, "utf8"));
@@ -46,4 +46,4 @@ if (expectedExamples) {
 assert.ok(loaded.sources.some((source) => source.slug === "tatoeba" && source.source.license === "CC BY 2.0 FR"));
 await window.happyDOM.close();
 process.stdout.write(JSON.stringify({ offlineExamples: true, snapshotBytes: bytes.length,
-  bundle: fileURLToPath(new URL("../src/web/shirabe-card.js", import.meta.url)), bundleHash: createHash("sha256").update(bundle).digest("hex") }));
+  bundle: fileURLToPath(new URL("../addon/src/web/shirabe-card.js", import.meta.url)), bundleHash: createHash("sha256").update(bundle).digest("hex") }));

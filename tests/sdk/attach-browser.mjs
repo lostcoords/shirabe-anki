@@ -154,7 +154,7 @@ const cat = snapshot.segments[0].results[0].candidates[0];
 const snapshotJSON = JSON.stringify(snapshot);
 const snapshotName = `_shirabe_snapshot_v1_${createHash("sha256").update(snapshotJSON).digest("hex")}.json`;
 const bootstrap = readFileSync(
-  new URL("../../src/web/attach.js", import.meta.url),
+  new URL("../../addon/src/web/attach.js", import.meta.url),
   "utf8",
 );
 const bundleText = sdkBundleFile

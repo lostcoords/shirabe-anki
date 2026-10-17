@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect } from "@playwright/test";
-const { browserEngines, launchBrowser } = await import(pathToFileURL(resolveCheckout(shirabe, "packages/study-runtime/test/browsers.mjs")));
+import { browserEngines, launchBrowser } from "../packages/template-runtime/test/browsers.mjs";
 
 const input = [];
 for await (const chunk of process.stdin) input.push(chunk);

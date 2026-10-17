@@ -1,0 +1,41 @@
+{
+  "name": "@shirabe-org/anki-runtime",
+  "type": "module",
+  "scripts": {
+    "build": "node build.mjs",
+    "build:engine": "node engine/build.mjs",
+    "test": "node --test test/runtime.test.mjs test/artifact.test.mjs",
+    "test:browser": "node --test test/browser.test.mjs test/snapshot.test.mjs test/speech.test.mjs"
+  },
+  "dependencies": {
+    "@jitl/quickjs-singlefile-browser-release-sync": "0.32.0",
+    "dompurify": "3.4.16",
+    "jquery": "3.7.1",
+    "linkedom": "0.18.13",
+    "quickjs-emscripten-core": "0.32.0"
+  },
+  "devDependencies": {
+    "esbuild": "0.28.2"
+  },
+  "version": "0.1.0",
+  "description": "Isolated execution and browser compatibility for Anki card templates.",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lostcoords/shirabe-anki.git",
+    "directory": "packages/template-runtime"
+  },
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": "./dist/runtime.mjs",
+    "./client": "./dist/client.mjs",
+    "./snapshot": "./dist/snapshot.mjs",
+    "./bridges/*": "./dist/bridges/*",
+    "./manifest.json": "./dist/manifest.json"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

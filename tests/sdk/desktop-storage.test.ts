@@ -12,7 +12,7 @@ import { Window } from "happy-dom";
 // That shim is the only implementation of this contract we write ourselves, and
 // it was wrong in a way nothing here could see: it ignored the key. This runs it.
 function desktopStorage(stored: string): Storage {
-  const source = readFileSync("../../src/web/attach.js", "utf8");
+  const source = readFileSync("../../addon/src/web/attach.js", "utf8");
   const opens = source.indexOf("function addonStorage()");
   assert.ok(opens > 0, "found the shim");
   const body = source.slice(opens, source.indexOf("\n  }", opens) + 4);
@@ -61,7 +61,7 @@ test("a config written by the single-slot version recovers to signed out", () =>
 
 function phoneLoader(portable = false) {
   const assets = portable ? "{'shirabe-card.js':'_card.js','attach.js':'_attach.js'}" : "None";
-  const html = execFileSync("python3", ["-c", `import sys; sys.path.insert(0, '../../src'); import template; print(template.block('https://shirabe.org', template.CLIENT_ID, 'click', assets=${assets}))`], { encoding: "utf8" });
+  const html = execFileSync("python3", ["-c", `import sys; sys.path.insert(0, '../../addon/src'); import template; print(template.block('https://shirabe.org', template.CLIENT_ID, 'click', assets=${assets}))`], { encoding: "utf8" });
   const source = html.match(/<script>([\s\S]*?)<\/script>/)![1]!;
   const scripts: Array<{ onload?: () => void; onerror?: () => void; src?: string; remove(): void }> = [];
   let attached = 0;
@@ -136,7 +136,7 @@ test("Anki's sign-in window redeems a pending approval through the SDK and saves
   };
   Object.assign(window, { __shirabe: settings, ShirabeCard: sdk });
   try {
-    const source = readFileSync("../../src/web/attach.js", "utf8");
+    const source = readFileSync("../../addon/src/web/attach.js", "utf8");
     new Function("window", "document", "ShirabeCard", "pycmd", source)(window, window.document, sdk, (command: string) => commands.push(command));
     for (let i = 0; i < 5; i++) await new Promise((resolve) => setTimeout(resolve, 0));
     assert.match(window.document.body.textContent, /Connected/);

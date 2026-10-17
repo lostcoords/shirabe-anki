@@ -226,7 +226,7 @@ def main():
         return 0
     if not re.fullmatch('[a-f0-9]{64}', args.bundle_sha256):
         parser.error('--bundle-sha256 requires the full lowercase hash announced by main')
-    bundle = Path(__file__).resolve().parents[1] / 'src/web/shirabe-card.js'
+    bundle = Path(__file__).resolve().parents[1] / 'addon/src/web/shirabe-card.js'
     if hashlib.sha256(bundle.read_bytes()).hexdigest() != args.bundle_sha256:
         parser.error('The local bundle does not match the announced release hash; no reviewer started')
     try:

@@ -16,7 +16,7 @@ from gui_safety import offscreen_test_application
 
 ROUNDS = 12
 MAX_BYTES = 128 * 1024
-BUNDLE = Path(__file__).resolve().parents[1] / "src/web/shirabe-card.js"
+BUNDLE = Path(__file__).resolve().parents[1] / "addon/src/web/shirabe-card.js"
 CSP = "default-src 'none'; base-uri 'none'; form-action 'none'"
 
 PROBE = r"""

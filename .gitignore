@@ -1,9 +1,10 @@
 node_modules/
-src/web/shirabe-card.js
-src/meta.json
+addon/src/web/shirabe-card.js
+addon/src/meta.json
 __pycache__/
 *.pyc
 tmp/
 artifacts/
 .env*
 .DS_Store
+packages/template-runtime/dist/

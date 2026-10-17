@@ -13,7 +13,7 @@ import sys
 import unittest
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent.parent / "src"
+SRC = Path(__file__).resolve().parent.parent / "addon/src"
 sys.path.insert(0, str(SRC))
 
 

@@ -4,7 +4,7 @@ const shirabe = resolveCheckout(process.env.SHIRABE_PATH ?? new URL("../../shira
 import { readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { chromium } from "playwright"
-const { CardRuntime } = await import(pathToFileURL(resolveCheckout(shirabe, "packages/study-runtime/dist/runtime.mjs")))
+import { CardRuntime } from "@shirabe-org/anki-runtime"
 
 const root = resolve(process.argv[2])
 const corpus = JSON.parse(await readFile(resolve(root, "expected.json"), "utf8"))
@@ -12,7 +12,7 @@ const browser = await chromium.launch({ headless: true, args: ["--mute-audio"] }
 const runtime = await CardRuntime.create()
 try {
   const page = await browser.newPage()
-  await page.addScriptTag({ path: "app/javascript/study_card_typed_answer.js" })
+  await page.addScriptTag({ path: new URL("../packages/template-runtime/bridges/study_card_typed_answer.js", import.meta.url).pathname })
   const failures = await page.evaluate((cases) => {
     const parts = (node) => [...node.childNodes].map((child) =>
       child.nodeType === Node.TEXT_NODE ? child.textContent : [child.tagName, child.className, child.id, child.textContent])

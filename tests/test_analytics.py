@@ -11,7 +11,7 @@ import unittest
 from pathlib import Path
 from unittest import mock
 
-SRC = Path(__file__).resolve().parent.parent / "src"
+SRC = Path(__file__).resolve().parent.parent / "addon/src"
 sys.path.insert(0, str(SRC))
 
 from shirabe_addon import analytics  # noqa: E402

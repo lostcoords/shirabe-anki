@@ -27,9 +27,13 @@ jobs:
       - run: npm run build
       - run: npm run check
       - run: npm test
+      - run: npm run test:runtime
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:runtime:browser
       - run: uv run --no-project --python 3.13 --with-requirements requirements-test.txt python tests/run.py
       - run: uv run --no-project --python 3.13 --with-requirements requirements-test.txt python tests/check_against_anki.py
       - run: npm run package
+      - run: npm run package:runtime
       - uses: actions/upload-artifact@v6
         with:
           name: anki-addon

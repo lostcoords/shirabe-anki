@@ -10,7 +10,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "tests"))
 from desktop_check import package
 
-if not (ROOT / "src/web/shirabe-card.js").is_file():
+if not (ROOT / "addon/src/web/shirabe-card.js").is_file():
     raise SystemExit("Run npm run build first")
 output = ROOT / "artifacts"
 output.mkdir(exist_ok=True)

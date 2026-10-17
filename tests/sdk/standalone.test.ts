@@ -80,7 +80,7 @@ test("the actual native collection study bridge bounds a missing callback at thr
     attach: (options: AttachOptions) => { attached = options; return { detach() {}, reread() {}, show() {} }; },
   };
   const view = { ShirabeCard: nativeSDK } as { ShirabeCard: typeof nativeSDK; ShirabeAnki?: { open(options: object): Promise<void> } };
-  const execute = new Function("window", "document", "ShirabeCard", "pycmd", "setTimeout", readFileSync("../../src/web/attach.js", "utf8"));
+  const execute = new Function("window", "document", "ShirabeCard", "pycmd", "setTimeout", readFileSync("../../addon/src/web/attach.js", "utf8"));
   execute(view, window.document, nativeSDK, (command: string) => commands.push(command),
     (callback: () => void, delay: number) => { timers.push({ callback, delay }); return timers.length; });
   await view.ShirabeAnki!.open({ apiBase: "https://shirabe.test", clientId: "anki", native: true, useCollectionStates: true });

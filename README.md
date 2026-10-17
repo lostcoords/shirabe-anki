@@ -240,3 +240,7 @@ update the installed note type. A phone's `localhost` is the phone itself.
 
 For SDK development, run `npm run sdk:link` to link `../shirabe-sdk`, then
 `npm run build` after SDK changes. Run `npm ci` to restore registry packages.
+
+## Template runtime
+
+`addon/` contains the Python add-on and phone integration. `packages/template-runtime/` contains the isolated Anki JavaScript runtime used by Shirabe's web renderer. The runtime is released independently as `@shirabe-org/anki-runtime`; it is not included in the `.ankiaddon` archive. See [runtime development and release commands](packages/template-runtime/README.md).

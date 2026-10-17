@@ -1,0 +1,40 @@
+name: Release Anki runtime
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Runtime package version
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci
+      - name: Verify release version
+        run: |
+          version=$(node -p 'require("./packages/template-runtime/package.json").version')
+          test "$RELEASE_VERSION" = "$version"
+      - run: npm run build --workspace @shirabe-org/anki-runtime
+      - run: npm run test:runtime
+      - run: npx playwright install --with-deps chromium firefox webkit
+      - run: npm run test:runtime:browser
+      - run: mkdir -p artifacts && npm run package:runtime
+      - run: node script/verify-runtime-package.mjs artifacts/*.tgz
+      - name: Publish the verified archive
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "anki-runtime-v$RELEASE_VERSION" artifacts/*.tgz --target "$GITHUB_SHA" --title "Anki runtime $RELEASE_VERSION" --notes "Standalone Anki template runtime and matching web assets. The Python add-on is packaged separately."

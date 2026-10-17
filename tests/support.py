@@ -10,7 +10,7 @@ import sys
 import types
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent.parent / "src"
+SRC = Path(__file__).resolve().parent.parent / "addon/src"
 
 if "shirabe_addon" not in sys.modules:
     package = types.ModuleType("shirabe_addon")
