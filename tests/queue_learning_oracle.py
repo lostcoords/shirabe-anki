@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Capture learning-ahead queues from disposable native Anki collections."""
 
 from contextlib import redirect_stdout
@@ -36,7 +37,7 @@ def configure(col, root, decks, *, limit, ordinary, due):
 
 def run():
     assert version == "26.08.1", version
-    with tempfile.TemporaryDirectory(prefix="anki-learning-oracle-", dir=Path(__file__).resolve().parents[2] / "tmp") as directory:
+    with tempfile.TemporaryDirectory(prefix="anki-learning-oracle-", dir=SCRATCH) as directory:
         cases = [capture(directory, f"ahead_{limit}_{ordinary}_{int(due)}", new_limit=100, review_limit=100,
                          configure=partial(configure, limit=limit, ordinary=ordinary, due=due), review_trace=True)
                  for limit in (0, 600, 1200) for ordinary in ("none", "new", "review", "both") for due in (False, True)]

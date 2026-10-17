@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from paths import SCRATCH
+
 import hashlib
 import cProfile
 import io
@@ -57,7 +59,7 @@ def fingerprints(collection):
 
 
 def run(config):
-    scratch = Path(__file__).resolve().parents[2] / "tmp"
+    scratch = SCRATCH
     source = Path(config["source_copy"]).resolve(strict=True)
     root = Path(config["directory"]).resolve(strict=True)
     destination = root / "collection.anki2"

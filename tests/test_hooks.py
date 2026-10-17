@@ -122,54 +122,6 @@ class NativeHooks(unittest.TestCase):
                     backend.check_access()
                 self.assertEqual(caught.exception.code, "reconnect_required")
 
-    def request(self, card_id=42):
-        return json.dumps({"action": "update", "cardId": card_id,
-                           "selection": {"surface": "猫", "lemma": "猫", "expression": "猫"}})
-
-    def reviewer(self):
-        from aqt.reviewer import Reviewer
-        return Mock(spec=Reviewer, state="answer", card=self.card)
-
-    def test_unknown_context_and_stale_card_cannot_open_authoring(self):
-        with patch.object(self.hooks.QTimer, "singleShot") as deferred:
-            for raw, context in ((self.request(), object()), (self.request(99), self.reviewer())):
-                self.assertFalse(json.loads(self.hooks.request_authoring(raw, context))["ok"])
-            deferred.assert_not_called()
-
-    def test_malformed_deck_messages_return_a_rejection_without_opening_native_ui(self):
-        nested = '{"action":"add","cardId":42,"selection":' + '[' * 10000 + '0' + ']' * 10000 + '}'
-        invalid_lemma = json.dumps({"action": "add", "cardId": 42, "selection": {"lemma": "\ud800"}})
-        with patch.object(self.hooks.QTimer, "singleShot") as deferred:
-            for raw in (nested, "\ud800", invalid_lemma):
-                with self.subTest(raw=raw[:40]):
-                    result = json.loads(self.hooks.request_authoring(raw, self.reviewer()))
-                    self.assertFalse(result["ok"])
-                    self.assertTrue(result["message"])
-                    self.assertFalse(self.hooks.AUTHORING_GATE.open)
-            deferred.assert_not_called()
-
-    def test_note_type_answer_only_preference_applies_to_reviewer_and_preview(self):
-        from aqt.browser.previewer import Previewer
-        reviewer = self.reviewer()
-        reviewer.state = "question"
-        preview = Mock(spec=Previewer)
-        preview.card.return_value = self.card
-        preview.state.return_value = "question"
-        self.assertIsNone(self.hooks.context_card(reviewer))
-        self.assertIsNone(self.hooks.context_card(preview))
-        self.mw.col.get_config.return_value = {"answerOnly": False}
-        self.assertIs(self.hooks.context_card(reviewer), self.card)
-        self.assertIs(self.hooks.context_card(preview), self.card)
-
-    def test_card_changed_before_native_dialog_drops_proposal_and_releases_gate(self):
-        reviewer = self.reviewer()
-        with patch.object(self.hooks.QTimer, "singleShot") as deferred:
-            self.assertTrue(json.loads(self.hooks.request_authoring(self.request(), reviewer))["ok"])
-            self.assertTrue(self.hooks.AUTHORING_GATE.open)
-            reviewer.card = None
-            deferred.call_args.args[1]()
-        self.assertFalse(self.hooks.AUTHORING_GATE.open)
-
     def test_native_states_receive_configured_identity_mappings(self):
         from shirabe_addon import authoring
         profiles = [object()]

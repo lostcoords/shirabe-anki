@@ -1,3 +1,4 @@
+from paths import SHIRABE
 """Compare Shirabe template expansion with rendered output from disposable Anki notes."""
 
 import json
@@ -116,7 +117,7 @@ def populate(col, deck, prefix="template"):
                 extracted = col._backend.extract_latex(text="".join(node.text for node in nodes),
                     svg=rendered.latex_svg, expand_clozes=False)
                 for latex in extracted.latex:
-                    data = b'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>' if rendered.latex_svg else (REPO / "test/fixtures/files/avatar.png").read_bytes()
+                    data = b'<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"></svg>' if rendered.latex_svg else (REPO / "tests/fixtures/files/avatar.png").read_bytes()
                     col.media.write_data(latex.filename, data)
     return notes
 
@@ -152,7 +153,7 @@ if __name__ == "__main__":
     root = Path(tempfile.mkdtemp(prefix="anki-templates-", dir=REPO / "tmp"))
     print(f"Artifacts: {root}", flush=True)
     build(root)
-    probe = subprocess.run(["bin/test", "unit", "test/models/study_rendering_corpus_test.rb"], cwd=REPO,
+    probe = subprocess.run(["bin/test", "unit", "test/models/study_rendering_corpus_test.rb"], cwd=SHIRABE,
         env={**os.environ, "ANKI_TEMPLATE_CORPUS": str(root)}, capture_output=True, text=True)
     (root / "rails.log").write_text(probe.stdout + probe.stderr)
     print(probe.stdout + probe.stderr)

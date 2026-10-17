@@ -1,3 +1,4 @@
+from paths import SHIRABE
 """Build Shirabe native notes and verify their package with the installed Anki backend."""
 
 import json
@@ -204,7 +205,7 @@ if __name__ == "__main__":
     require_anki()
     root = Path(tempfile.mkdtemp(prefix="anki-native-", dir=REPO / "tmp"))
     print(f"Artifacts: {root}", flush=True)
-    probe = subprocess.run(["bin/test", "unit", "test/models/anki/native_export_test.rb", "test/models/official_deck_cloner_test.rb"], cwd=REPO,
+    probe = subprocess.run(["bin/test", "unit", "test/models/anki/native_export_test.rb", "test/models/official_deck_cloner_test.rb"], cwd=SHIRABE,
         env={**os.environ, "ANKI_NATIVE_EXPORT_ROOT": str(root)}, capture_output=True, text=True)
     (root / "rails.log").write_text(probe.stdout + probe.stderr)
     if probe.returncode:

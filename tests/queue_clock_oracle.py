@@ -182,7 +182,7 @@ if __name__ == "__main__":
         print(json.dumps(report))
     else:
         assert sys.platform == "darwin", "The native clock oracle currently requires macOS"
-        root = Path(__file__).resolve().parents[2]
+        root = Path(__file__).resolve().parents[1]
         with tempfile.TemporaryDirectory(prefix="anki-clock-oracle-", dir=root / "tmp") as directory:
             library = Path(directory) / "clock.dylib"
             subprocess.run(["clang", "-dynamiclib", "-Wall", "-Werror", "-O2",

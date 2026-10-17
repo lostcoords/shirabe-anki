@@ -105,13 +105,8 @@
       });
     }
 
-    if (bridged() && Number.isSafeInteger(settings.cardId) && settings.cardId > 0) {
-      host.authoring = {
-        addNote: function (selection) { return propose("add", selection); },
-        updateNote: function (selection) { return propose("update", selection); },
-        findNotes: function (selection) { return propose("find", selection); },
-      };
-    } else if (typeof AnkiDroidJS === "function" && typeof AnkiDroidJS.prototype.ankiSearchCard === "function") {
+    if (!(bridged() && Number.isSafeInteger(settings.cardId) && settings.cardId > 0) &&
+        typeof AnkiDroidJS === "function" && typeof AnkiDroidJS.prototype.ankiSearchCard === "function") {
       if (host.resolvePending) {
         var connect = host.resolvePending.bind(host);
         host.resolvePending = function (onProgress) {
@@ -124,15 +119,6 @@
           });
         };
       }
-      host.authoring = {
-        findNotes: async function (selection) {
-          var android = new AnkiDroidJS({ version: "0.0.3", developer: "support@shirabe.org" });
-          var text = String(selection.expression || selection.lemma || "").slice(0, 256);
-          var query = '"' + text.replace(/\\/g, "\\\\").replace(/"/g, '\\"') + '"';
-          var result = await android.ankiSearchCard(query);
-          if (result && result.success === false) throw new Error("AnkiDroid couldn't open the card browser.");
-        },
-      };
     }
 
     if (settings.useCollectionStates && bridged()) {
@@ -181,23 +167,6 @@
     }).catch(function (error) {
       panel.textContent = error.message || "Couldn't connect. Please try again.";
       panel.appendChild(retry);
-    });
-  }
-
-  function propose(action, selection) {
-    var cardId = settings.cardId;
-    return new Promise(function (resolve, reject) {
-      var timer = setTimeout(function () { reject(new Error("Anki did not answer. Try again.")); }, 5000);
-      pycmd("shirabe:author:" + JSON.stringify({ action: action, cardId: cardId, selection: selection }), function (answer) {
-        clearTimeout(timer);
-        try {
-          var result = JSON.parse(answer);
-          if (!result.ok) throw new Error(result.message || "Could not open Anki.");
-          resolve();
-        } catch (error) {
-          reject(error);
-        }
-      });
     });
   }
 

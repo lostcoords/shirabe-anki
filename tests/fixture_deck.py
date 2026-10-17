@@ -15,7 +15,7 @@ import tempfile
 import wave
 
 HERE = Path(__file__).resolve().parent
-REPO = HERE.parents[1]
+REPO = HERE.parent
 DECK = "Shirabe Phase 0"
 PROBE = "_shirabe_phase0_probe_v1.js"
 PAYLOAD = "_shirabe_phase0_snapshot_v1.json"

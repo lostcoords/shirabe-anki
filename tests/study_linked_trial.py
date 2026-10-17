@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Keep a loopback-only development trial and sync it through the native coordinator."""
 
 import argparse
@@ -19,7 +20,7 @@ def configuration(directory):
 
     requested = Path(directory)
     root = requested.resolve(strict=True)
-    scratch = Path(__file__).resolve().parents[2] / "tmp"
+    scratch = SCRATCH
     if requested.is_symlink() or not root.is_relative_to(scratch) or not root.name.startswith("study-linked-trial-"):
         raise ValueError("Use a retained study-linked-trial directory under workspace tmp")
     config = json.loads((root / "trial.json").read_text())

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from paths import SHIRABE
+
 import hashlib
 import json
 from pathlib import Path
@@ -244,8 +246,8 @@ def build(root, source_manifest, sizes):
     report["passed"] = all(checks.values()) and all(row["indexed_cards"] == row["cards"] for row in report["benchmarks"])
     save_json(root / "report.json", report)
     probe = subprocess.run(
-        [str(REPO / "bin/test"), "unit", "test/models/anki/study_corpus_test.rb", "test/models/anki/collection_source_test.rb"],
-        cwd=REPO, env={**os.environ, "ANKI_STUDY_CORPUS": str(root)},
+        [str(SHIRABE / "bin/test"), "unit", "test/models/anki/study_corpus_test.rb", "test/models/anki/collection_source_test.rb"],
+        cwd=SHIRABE, env={**os.environ, "ANKI_STUDY_CORPUS": str(root)},
         capture_output=True, text=True,
     )
     (root / "shirabe-import.log").write_text(probe.stdout + probe.stderr)

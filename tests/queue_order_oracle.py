@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Compare actual queued card IDs for native display-order settings."""
 
 from contextlib import redirect_stdout
@@ -94,7 +95,7 @@ def run():
                           ("newGatherPriority", range(6)), ("newSortOrder", range(5))):
         for value in values:
             cases[f"{field}_{value}"] = ({field: value}, field == "newSortOrder")
-    with tempfile.TemporaryDirectory(prefix="anki-order-oracle-", dir=Path(__file__).resolve().parents[2] / "tmp") as directory:
+    with tempfile.TemporaryDirectory(prefix="anki-order-oracle-", dir=SCRATCH) as directory:
         captured = [
             capture(directory, name, new_limit=20, review_limit=100, interday=3, review_trace=True,
                     configure=partial(configure, options=options, siblings=siblings))

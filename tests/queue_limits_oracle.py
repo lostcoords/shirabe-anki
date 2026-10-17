@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Read new-card limits from a disposable pinned Anki collection."""
 
 from contextlib import closing, redirect_stdout
@@ -13,7 +14,7 @@ from anki.collection import Collection
 
 def run():
     assert version == "26.08.1", version
-    root = Path(__file__).resolve().parents[2] / "tmp"
+    root = SCRATCH
     with tempfile.TemporaryDirectory(prefix="anki-limit-oracle-", dir=root) as directory:
         with closing(Collection(str(Path(directory) / "collection.anki2"))) as collection:
             deck_id = collection.decks.id("Limits")

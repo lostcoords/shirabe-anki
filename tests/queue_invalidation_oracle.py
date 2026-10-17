@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Capture edits to live learning queues in disposable native collections."""
 
 from contextlib import redirect_stdout
@@ -94,7 +95,7 @@ def burial_timeline(col):
 
 def run():
     assert version == "26.08.1", version
-    with tempfile.TemporaryDirectory(prefix="anki-queue-invalidation-", dir=Path(__file__).resolve().parents[2] / "tmp") as directory:
+    with tempfile.TemporaryDirectory(prefix="anki-queue-invalidation-", dir=SCRATCH) as directory:
         cases = [capture(directory, f"{mode}_{action}_{position}", new_limit=100, review_limit=100,
                          configure=partial(configure_session, mode=mode, preset="ordinary", limit=1200, staggered=True),
                          visit=partial(timeline, action=action, position=position))

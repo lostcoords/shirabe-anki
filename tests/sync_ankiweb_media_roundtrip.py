@@ -29,7 +29,7 @@ def progress(done, total):
 
 
 def media_bytes(prefix):
-    fixtures = Path(__file__).resolve().parents[2] / "test/fixtures/files"
+    fixtures = Path(__file__).resolve().parent / "fixtures/files"
     sound = io.BytesIO()
     with wave.open(sound, "wb") as wav:
         wav.setnchannels(1)

@@ -1,0 +1,37 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      QT_QPA_PLATFORM: offscreen
+      QTWEBENGINE_CHROMIUM_FLAGS: --disable-gpu --no-sandbox --mute-audio
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: astral-sh/setup-uv@v7
+      - run: sudo apt-get update && sudo apt-get install --yes libegl1 libxkbcommon-x11-0 libxcb-cursor0
+      - run: npm ci
+      - run: npm run build
+      - run: npm run check
+      - run: npm test
+      - run: uv run --no-project --python 3.13 --with-requirements requirements-test.txt python tests/run.py
+      - run: uv run --no-project --python 3.13 --with-requirements requirements-test.txt python tests/check_against_anki.py
+      - run: npm run package
+      - uses: actions/upload-artifact@v6
+        with:
+          name: anki-addon
+          path: artifacts/*
+          if-no-files-found: error

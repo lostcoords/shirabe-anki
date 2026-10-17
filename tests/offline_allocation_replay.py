@@ -20,7 +20,7 @@ import sys
 from types import SimpleNamespace
 from urllib.parse import urlsplit
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 MANIFEST = Path(__file__).with_name("offline_allocation_inputs.json")
 STAMP = 1_700_000_000
 LIMIT = 128 * 1024
@@ -217,7 +217,7 @@ def replay(inputs, *, indexes=None, sdk=False):
     assert all(row["index"] == i and row["text"] == corpus[i]["text"] for i, row in enumerate(baseline["notes"]))
     arrange, choose = frozen_allocator(inputs["prototype_code"])
     answers = captured_answers(captured)
-    source_paths = [ROOT / "anki-addon/src" / name for name in ("offline.py", "offline_ui.py", "offline_audio.py")]
+    source_paths = [ROOT / "src" / name for name in ("offline.py", "offline_ui.py", "offline_audio.py")]
     source_paths.append(Path(__file__).with_name("offline_corpus_measure.py"))
     source_hashes = {str(path.relative_to(ROOT)): digest(path.read_bytes()) for path in source_paths}
     import support

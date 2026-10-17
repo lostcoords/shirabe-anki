@@ -276,7 +276,7 @@ class NativeFixtureMetadata(unittest.TestCase):
                 'name': 'Deterministic test data', 'url': 'https://example.test', 'license': 'CC0-1.0',
             })
             self.assertNotIn('entryCount', snapshot['sources'][0])
-            self.assertEqual(len(requests), 5)
+            self.assertEqual(len(requests), 6)
         finally:
             server.shutdown()
             server.server_close()

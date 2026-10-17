@@ -1,3 +1,4 @@
+from paths import SHIRABE
 """Capture learning-step decisions from a disposable installed-Anki collection."""
 
 import json
@@ -284,7 +285,7 @@ if __name__ == "__main__":
     root = Path(tempfile.mkdtemp(prefix="anki-scheduler-", dir=REPO / "tmp"))
     report = build(root)
     print(json.dumps({"artifacts": str(root), "anki_version": report["anki_version"], "cases": len(report["cases"])}))
-    check = subprocess.run(["bin/test", "unit", "test/models/anki/learning_corpus_test.rb"], cwd=REPO,
+    check = subprocess.run(["bin/test", "unit", "test/models/anki/learning_corpus_test.rb"], cwd=SHIRABE,
         env={**os.environ, "ANKI_SCHEDULER_CORPUS": str(root)}, capture_output=True, text=True)
     (root / "rails.log").write_text(check.stdout + check.stderr)
     print(check.stdout + check.stderr)

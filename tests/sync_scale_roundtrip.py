@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Measure real HTTP sync with fresh native collections, including media."""
 
 from contextlib import closing, contextmanager
@@ -70,7 +71,7 @@ class Measurements:
 
 def run(config):
     root = Path(config["directory"]).resolve(strict=True)
-    if not root.is_relative_to(Path(__file__).resolve().parents[2] / "tmp") or (root / "collection.anki2").exists():
+    if not root.is_relative_to(SCRATCH) or (root / "collection.anki2").exists():
         raise ValueError("Use a fresh disposable directory under workspace tmp")
     size = config["cards"]
     if type(size) is not int or size < 1000 or size > 100_000 or size % 1000:

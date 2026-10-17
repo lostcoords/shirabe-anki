@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Native media transfer against Rails, using only a disposable collection."""
 
 from contextlib import closing
@@ -24,7 +25,7 @@ def run(config):
         package = None
         if config.get("package"):
             package = Path(config["package"]).resolve(strict=True)
-            if not package.is_relative_to(Path(__file__).resolve().parents[2] / "tmp") or package.suffix != ".apkg":
+            if not package.is_relative_to(SCRATCH) or package.suffix != ".apkg":
                 raise ValueError("Use an authorized trial package under workspace tmp")
             with package.open("rb") as source:
                 package_digest = hashlib.file_digest(source, "sha256").hexdigest()

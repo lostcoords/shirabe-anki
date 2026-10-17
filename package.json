@@ -1,0 +1,35 @@
+{
+  "name": "shirabe-anki",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Shirabe dictionary lookup, note authoring, and study sync for Anki.",
+  "type": "module",
+  "license": "GPL-3.0-only",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/lostcoords/shirabe-anki.git"
+  },
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "node script/build.mjs",
+    "check": "tsc --noEmit -p tests/sdk/tsconfig.json",
+    "test": "python3 tests/run.py && npm run test:js",
+    "test:js": "node tests/sdk/run.mjs",
+    "package": "npm run build && python3 script/package.py",
+    "sdk:link": "node script/link-sdk.mjs"
+  },
+  "dependencies": {
+    "@shirabe-org/api": "0.6.1",
+    "@shirabe-org/card": "0.2.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.10.1",
+    "@playwright/test": "1.62.0",
+    "esbuild": "^0.28.1",
+    "happy-dom": "^20.10.6",
+    "playwright": "1.62.0",
+    "typescript": "^5.6.3"
+  }
+}

@@ -1,6 +1,6 @@
 """Check imported symbols, hooks and an explicit runtime API inventory in Anki.
 
-    python3 anki-addon/tests/check_against_anki.py [--python /path/to/python]
+    python3 tests/check_against_anki.py [--python /path/to/python]
 
 Defaults to an installed Anki's Python. Opens no collection or window. This
 checks availability, not signatures or behavior; native tests cover those.
@@ -171,6 +171,7 @@ def observed_native_calls(source):
 
 
 PROBE = """
+import anki.collection
 import sys, json
 wanted = json.loads(sys.argv[1])
 hooks = json.loads(sys.argv[2])

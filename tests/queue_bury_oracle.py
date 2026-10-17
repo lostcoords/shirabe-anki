@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Capture sibling eligibility from disposable native Anki collections."""
 
 from contextlib import redirect_stdout
@@ -57,7 +58,7 @@ def run():
     assert version == "26.08.1", version
     pairs = [(0, 0), (2, 2), (3, 3), (0, 2), (0, 3),
              (2, 3), (1, 2), (1, 3), (1, 0), (1, 1)]
-    with tempfile.TemporaryDirectory(prefix="anki-bury-oracle-", dir=Path(__file__).resolve().parents[2] / "tmp") as directory:
+    with tempfile.TemporaryDirectory(prefix="anki-bury-oracle-", dir=SCRATCH) as directory:
         cases = [
             capture(directory, f"bury_{left}_{right}_{flags}", new_limit=100, review_limit=100,
                     configure=partial(configure, queues=(left, right), flags=flags))

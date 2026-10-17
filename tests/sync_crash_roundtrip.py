@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """SIGKILL disposable sync workers and compare recovery with a control sync."""
 
 from contextlib import closing
@@ -201,7 +202,7 @@ def fingerprints_without_card_mod(collection, creation_guid=None):
 def worker(config):
     reconciling = config.get("mode", "").startswith("incoming") or config.get("mode") in ("outgoing_note_choice", "media")
     root = Path(config["directory"]).resolve(strict=True)
-    if not root.is_relative_to(Path(__file__).resolve().parents[2] / "tmp") or not (root / "collection.anki2").resolve(strict=True).is_relative_to(root):
+    if not root.is_relative_to(SCRATCH) or not (root / "collection.anki2").resolve(strict=True).is_relative_to(root):
         raise ValueError("Crash workers require a disposable workspace directory")
     client = SyncLogin(Path(config["login_path"]), config["origin"])
     path = root / "sync.sqlite3"
@@ -474,7 +475,7 @@ def run_worker(config, checkpoint=None):
 def run(config):
     reconciling = config.get("mode", "").startswith("incoming") or config.get("mode") in ("outgoing_note_choice", "media")
     root = Path(config["directory"]).resolve(strict=True)
-    if not root.is_relative_to(Path(__file__).resolve().parents[2] / "tmp"):
+    if not root.is_relative_to(SCRATCH):
         raise ValueError("Use a fresh disposable workspace directory")
     source = root / "source.anki2"
     if source.exists():

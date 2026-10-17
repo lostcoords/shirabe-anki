@@ -1,6 +1,6 @@
 """Rerunnable size/build benchmark with synthetic definitions and modeled latency.
 
-Run: python3 anki-addon/tests/offline_measure.py --rounds 5 --latency-ms 25
+Run: python3 tests/offline_measure.py --rounds 5 --latency-ms 25
 No DOM capture, sync, dictionary packs, or real network are timed.
 --native-output separately times and verifies real Anki media persistence.
 """

@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Capture daily-limit cases from disposable pinned native collections."""
 
 from contextlib import closing, redirect_stdout
@@ -172,7 +173,7 @@ def run():
         "child_new": {"children": True, "selected_child": True, "reviews": 0},
         "child_new_from_top": {"children": True, "selected_child": True, "top": True, "reviews": 0},
     }
-    with tempfile.TemporaryDirectory(prefix="anki-queue-budget-", dir=Path(__file__).resolve().parents[2] / "tmp") as directory:
+    with tempfile.TemporaryDirectory(prefix="anki-queue-budget-", dir=SCRATCH) as directory:
         return {"version": version, "cases": [capture(directory, name, limit_probe=True, **options) for name, options in cases.items()]}
 
 

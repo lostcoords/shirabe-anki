@@ -30,7 +30,7 @@ from pathlib import Path
 
 from anki.hooks import wrap
 from aqt import gui_hooks, mw
-from aqt.qt import QAction, QMenu, QDialog, QVBoxLayout, QDialogButtonBox, QTimer
+from aqt.qt import QAction, QMenu, QDialog, QVBoxLayout, QDialogButtonBox
 from aqt.webview import AnkiWebView
 from aqt.utils import showInfo, showWarning, tooltip
 
@@ -51,7 +51,6 @@ BRIDGE_PREFIX = "shirabe:"
 # the bridge is reachable from any JavaScript on a rendered card, including a
 # shared deck's own.
 REPORTABLE = {"card_opened", "card_missing", "lookup_failed", "word_saved", "word_known", "save_refused"}
-AUTHORING_GATE = bridge.ProposalGate()
 
 
 def config() -> dict:
@@ -76,9 +75,9 @@ def on_card_will_show(html: str, card, kind: str) -> str:
     return '<script>window.__shirabeNativeRender = true;</script>' + template.DETACH + inject.with_card(html, values, WEB_BASE, kind=kind)
 
 
-def on_js_message(handled: tuple[bool, object], message: str, context: object) -> tuple[bool, object]:
-    """The three things the card asks Python for: its own states, somewhere to
-    keep a sign-in that outlives Anki's port, and a report.
+def on_js_message(handled: tuple[bool, object], message: str, _context: object) -> tuple[bool, object]:
+    """The card asks Python for its own states, somewhere to keep a sign-in that
+    outlives Anki's port, and a report.
 
     Returning `handled` untouched for anything else is not politeness, it is
     required: every add-on's handler sees every message, and swallowing one
@@ -88,8 +87,6 @@ def on_js_message(handled: tuple[bool, object], message: str, context: object) -
         return handled
 
     command, _, payload = message[len(BRIDGE_PREFIX):].partition(":")
-    if command == "author":
-        return (True, request_authoring(payload, context))
     if command == "report":
         # The card reports through Python rather than posting for itself: one
         # sender, and one place the reader's opt-out is honoured.
@@ -124,73 +121,6 @@ def sign_out() -> None:
     for web in mw.findChildren(AnkiWebView):
         web.eval("if (window.ShirabeAnki) window.ShirabeAnki.signOut();")
     tooltip("Signed out of Shirabe on this computer.")
-
-
-def context_card(context):
-    from aqt.reviewer import Reviewer
-    from aqt.browser.previewer import Previewer
-
-    if isinstance(context, Reviewer):
-        if context.card is None:
-            return None
-        if inject.card_settings(config(), context.card).get("answerOnly", True) and context.state != "answer":
-            return None
-        return context.card
-    if isinstance(context, Previewer):
-        card = context.card()
-        if card is None:
-            return None
-        if inject.card_settings(config(), card).get("answerOnly", True) and context.state() != "answer":
-            return None
-        return card
-    return None
-
-
-def request_authoring(raw: str, context) -> str:
-    from . import authoring
-
-    try:
-        proposal = bridge.Proposal.parse(raw)
-        card = context_card(context)
-        if not config().get("enabled", True) or card is None or int(card.id) != proposal.card_id:
-            raise bridge.BridgeError("This card has changed. Look the word up again.")
-        lookup = authoring.Lookup.from_selection(proposal.selection)
-        note_id = int(card.nid)
-        AUTHORING_GATE.enter()
-    except (bridge.BridgeError, authoring.AuthoringError) as error:
-        return json.dumps({"ok": False, "message": str(error)})
-
-    def open_native():
-        delegated = False
-        try:
-            current = context_card(context)
-            if current is None or int(current.id) != proposal.card_id or mw.col is None:
-                return
-            values = config()
-            if proposal.action == "add":
-                delegated = True
-                authoring.open_add_note(mw, lookup, config=values, save_config=save_config,
-                                        on_closed=AUTHORING_GATE.leave)
-            elif proposal.action == "update":
-                delegated = True
-                authoring.preview_update(mw, note_id, lookup, config=values, save_config=save_config,
-                                         on_closed=AUTHORING_GATE.leave)
-            else:
-                from aqt import dialogs
-                note_ids = authoring.find_existing_notes(mw.col, lookup, authoring.profiles_from_config(values))
-                if not note_ids:
-                    return showInfo("No matching Anki notes. Map your expression and reading fields in Shirabe's note settings.")
-                browser = dialogs.open("Browser", mw)
-                browser.search_for("nid:" + ",".join(str(nid) for nid in note_ids))
-        except (authoring.AuthoringError, ValueError) as error:
-            delegated = False
-            showWarning(str(error))
-        finally:
-            if not delegated:
-                AUTHORING_GATE.leave()
-
-    QTimer.singleShot(0, open_native)
-    return json.dumps({"ok": True})
 
 
 def open_settings() -> None:

@@ -1,3 +1,4 @@
+from paths import SHIRABE
 """Measure Anki's review workload boundary in disposable collections."""
 
 import json
@@ -109,7 +110,7 @@ if __name__ == "__main__":
     print(json.dumps({"artifacts": str(root), "anki_version": report["anki_version"],
         "easy_intervals": {case["name"]: [card["states"]["easy"]["normal"]["review"]["scheduled_days"]
             for card in case["cards"]] for case in report["cases"]}}, indent=2))
-    check = subprocess.run(["bin/test", "unit", "test/models/anki/workload_corpus_test.rb"], cwd=REPO,
+    check = subprocess.run(["bin/test", "unit", "test/models/anki/workload_corpus_test.rb"], cwd=SHIRABE,
         env={**os.environ, "ANKI_WORKLOAD_CORPUS": str(root)}, capture_output=True, text=True)
     (root / "rails.log").write_text(check.stdout + check.stderr)
     print(check.stdout + check.stderr)

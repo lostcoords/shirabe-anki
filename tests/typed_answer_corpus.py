@@ -1,3 +1,4 @@
+from paths import SHIRABE
 """Compare browser typed answers with Anki in a disposable collection."""
 
 from pathlib import Path
@@ -56,8 +57,8 @@ if __name__ == "__main__":
     root = Path(tempfile.mkdtemp(prefix="anki-typed-", dir=REPO / "tmp"))
     print(f"Artifacts: {root}", flush=True)
     build(root)
-    compiled = subprocess.run(["npm", "run", "build", "--workspace", "@shirabe-org/study-runtime"], cwd=REPO)
+    compiled = subprocess.run(["npm", "run", "build", "--workspace", "@shirabe-org/study-runtime"], cwd=SHIRABE)
     if compiled.returncode:
         sys.exit(compiled.returncode)
-    result = subprocess.run(["node", "anki-addon/tests/typed_answer_browser.mjs", str(root)], cwd=REPO)
+    result = subprocess.run(["node", str(Path(__file__).with_name("typed_answer_browser.mjs")), str(root)], cwd=SHIRABE)
     sys.exit(result.returncode)

@@ -910,9 +910,9 @@ No runtime or bundle edits followed this diagnostic.
 The same source checkpoint passed 253 SDK tests, both TypeScript checks, and
 house rules. Extension tests passed 301 of 302. The unrelated existing
 background-source condition failed in
-`extension/test/manifest.test.ts:423`, test
+[Reader `test/manifest.test.ts:423`](https://github.com/lostcoords/shirabe-reader/blob/main/test/manifest.test.ts#L423), test
 `offline parsing does not wait for profile-state network hydration`.
-Its `/return lists;/` assertion reads `extension/src/background/background.ts`;
+Its `/return lists;/` assertion reads [Reader `src/background/background.ts`](https://github.com/lostcoords/shirabe-reader/blob/main/src/background/background.ts);
 it does not inspect the Rails `api_dictionaries` helper. No extension fix or
 distribution rebuild accompanied these measurements.
 

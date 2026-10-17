@@ -179,7 +179,7 @@ class Lookup:
 
     @classmethod
     def from_selection(cls, selection: Mapping) -> Lookup:
-        """Adapt the SDK AuthoringSelection without selecting an example or media.
+        """Parse a dictionary selection without choosing an example or media.
 
         audioUrls are untrusted suggestions and confer no download permission;
         licensed audio is selected separately through authoring_media.
@@ -656,7 +656,7 @@ def enrich_browser_selection(browser, config: dict, save_config: Callable):
 def propose(mw, config: dict, save_config: Callable, payload: dict, context_note=None, *, editor=None):
     """Open native approval after the bridge validates its current card context.
 
-    payload is {action: add|update|find, selection: AuthoringSelection}, or
+    payload is {action: add|update|find, selection: Lookup.from_selection-compatible dict}, or
     {action: ..., lookup: Lookup.from_payload-compatible dict}. context_note is
     a Note resolved natively; editor is its optional native Editor.
     """

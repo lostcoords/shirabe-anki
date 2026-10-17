@@ -1,3 +1,4 @@
+from paths import SCRATCH
 import hashlib
 import json
 import os
@@ -10,7 +11,7 @@ from study_linked_trial import configuration
 
 class StudyLinkedTrialTest(unittest.TestCase):
     def setUp(self):
-        scratch = Path(__file__).resolve().parents[2] / "tmp"
+        scratch = SCRATCH
         self.temporary = tempfile.TemporaryDirectory(prefix="study-linked-trial-", dir=scratch)
         self.addCleanup(self.temporary.cleanup)
         self.root = Path(self.temporary.name)

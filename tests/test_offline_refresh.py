@@ -18,7 +18,7 @@ except ModuleNotFoundError as error:
 def pinned_preparation(texts=("猫犬鳥",)):
     def pinned(text):
         answer = parse(text)
-        for token in answer["tokens"]:
+        for token in answer["results"][0]["tokens"]:
             token["entry"] = {"dictionary": "jmdict", "sourceId": token["surface"]}
         return answer
 

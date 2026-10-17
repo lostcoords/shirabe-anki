@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from paths import SCRATCH
+
 import argparse
 import hashlib
 import json
@@ -18,7 +20,7 @@ from shirabe_addon.sync_state import SyncState
 
 
 def run(source):
-    scratch = Path(__file__).resolve().parents[2] / "tmp"
+    scratch = SCRATCH
     source = source.resolve(strict=True)
     if not source.is_relative_to(scratch) or source.name != "collection.anki2":
         raise ValueError("Use an authorized collection copy under the workspace's tmp directory")

@@ -4,7 +4,7 @@ import { readFileSync } from "node:fs";
 import { createRequire } from "node:module";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-const require = createRequire(new URL("../../package.json", import.meta.url));
+const require = createRequire(new URL("../package.json", import.meta.url));
 const { Window } = await import(pathToFileURL(require.resolve("happy-dom")).href);
 const window = new Window({ url: "https://fixture.invalid/" });
 window.TextDecoder = TextDecoder;

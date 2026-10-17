@@ -22,7 +22,7 @@ import support
 from shirabe_addon import authoring_media, offline, offline_audio
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SCRATCH = ROOT / "tmp"
 MAX_INPUTS = 10_000
 

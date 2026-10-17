@@ -1,3 +1,4 @@
+from paths import SHIRABE
 """Measure prepared snapshots from real local controller responses, or replay a capture.
 
 Input is a JSON array of text strings or objects containing text. Existing token
@@ -24,7 +25,7 @@ from urllib.parse import urlsplit
 import support
 from shirabe_addon import offline, offline_audio, offline_ui
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 MAX_CAPTURE_BYTES = 256 * 1024 * 1024
 
 
@@ -42,8 +43,8 @@ def distribution(values):
 @contextmanager
 def controller(log_path):
     with log_path.open("xb") as log:
-        process = subprocess.Popen(["bundle", "exec", "ruby", str(Path(__file__).with_name("offline_corpus_api.rb"))],
-                                   cwd=ROOT, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log)
+        process = subprocess.Popen(["bundle", "exec", "ruby", str(SHIRABE / "script/anki-offline-corpus.rb")],
+                                   cwd=SHIRABE, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=log)
         def receive():
             if not select.select([process.stdout], [], [], 120)[0]:
                 raise TimeoutError("Read-only controller did not respond in 120 seconds")

@@ -16,7 +16,7 @@ from offline_fixture import prepared
 from shirabe_addon import offline
 
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = Path(__file__).with_name("snapshot_persistence_measure.py")
 
 

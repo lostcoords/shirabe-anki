@@ -83,7 +83,7 @@ inspect note values or verify media. They do not block synchronization.
 Sync template corrections to refresh the reports, then preview actual cards.
 
 Inspect custom-script cards before relying on them. Check the
-[template limitations and copied-profile results](../docs/specs/study-notes.md#template-compatibility-has-a-boundary),
+[template limitations and copied-profile results](https://github.com/lostcoords/shirabe/blob/main/docs/specs/study-notes.md#template-compatibility-has-a-boundary),
 especially add-on filters and JP Mining Note diagnostics. Keep Anki available
 for cards whose answers do not render correctly. Successful grading alone does
 not prove rendering compatibility.
@@ -118,14 +118,11 @@ Ordinary selection and copy still work.
 2. Choose an existing note type. Map the fields you want Shirabe to fill, then
    save the profile. Use **Create Shirabe Japanese note type** only if you want
    a separate vocabulary layout.
-3. Open a word popup. Expand **Copy and choose fields** to choose its surface or
-   dictionary form, meanings, and examples.
-4. Choose **Add Anki note** to review a prefilled native Add window. Choose
-   **Update this note** to review changes to the current note.
-5. Inspect **Current**, **Action**, and **After** before saving. Keep the default
+3. In Anki's Add or Edit window, select Japanese and press **調べる**. Search,
+   choose the dictionary match, and review the prefilled native window.
+4. Inspect **Current**, **Action**, and **After** before saving. Keep the default
    fill-empty action unless you intend to append or replace a field.
 
-Use **Find in Anki** to inspect existing notes before creating another one.
 Map expression, reading, and entry fields for more precise duplicate matches.
 Do not treat a spelling-only candidate as an identical word.
 
@@ -181,12 +178,7 @@ address into your browser, approve the connection, and return to AnkiDroid.
 You do not need to allow every card to launch other apps.
 
 Sign in separately on each device. Do not copy a Desktop login into a note or
-template. On AnkiDroid, use **Find in Anki** and the copy controls; unsupported
-Desktop editing actions are not offered.
-
-In **Copy and choose fields**, choose meanings or examples, then copy the
-Japanese sentences, translations, or both. **Copy current sentence** keeps the
-sentence from the card available alongside corpus examples.
+template. Note creation stays on Desktop.
 
 If AnkiDroid asks you to sign in again after a restart, check that storage setting.
 Avoid force-stopping the app immediately after approving a new login; leave the
@@ -222,14 +214,20 @@ signed out. Keep a backup if you need older snapshots for an undone change.
 From the repository root, build the add-on's shared popup:
 
 ```sh
-npm run sdk:assets -- anki
-python3 anki-addon/tests/run.py
+npm ci
+npm run build
+npm run check
+npm test
+npm run package
 ```
 
 Ordinary Python runs the portable suite. CI runs the same suite against its
 pinned Anki runtime to exercise collection and Qt tests. Use the isolated-profile
 [Desktop runner](tests/desktop_check.py) and
 [fixture deck generator](tests/fixture_deck.py) for client verification.
+
+Cross-client checks use `SHIRABE_PATH` to select the Rails checkout, defaulting to
+`../shirabe`. Run `npm run package` to create `artifacts/shirabe-anki.ankiaddon`.
 
 The renderer comes from the installed `@shirabe-org/card` release. After upgrading
 it, copy the bundle again. Restart Anki after changing Python or loading a new
@@ -239,3 +237,6 @@ Use an isolated test profile, not a real study collection.
 For a local API, set **Settings → Advanced → Server** to the Rails server's
 loopback address. For phone testing, use an address the phone can reach, then
 update the installed note type. A phone's `localhost` is the phone itself.
+
+For SDK development, run `npm run sdk:link` to link `../shirabe-sdk`, then
+`npm run build` after SDK changes. Run `npm ci` to restore registry packages.

@@ -1,3 +1,4 @@
+from paths import SCRATCH
 """Review copied Japanese cards in the browser while their native collection is closed."""
 
 import hashlib
@@ -17,7 +18,7 @@ def prepare(collection, filename):
     from anki.import_export_pb2 import ImportAnkiPackageRequest
 
     package = Path(filename).resolve(strict=True)
-    scratch = Path(__file__).resolve().parents[2] / "tmp"
+    scratch = SCRATCH
     if not package.is_relative_to(scratch) or package.suffix != ".apkg":
         raise ValueError("Use an authorized trial package under workspace tmp")
     before = digest(package)

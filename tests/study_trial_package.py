@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from paths import SCRATCH
+
 import argparse
 import hashlib
 import json
@@ -23,7 +25,7 @@ def export(report_path, root):
     from anki.import_export_pb2 import ExportAnkiPackageOptions
     from anki.collection import NoteIdsLimit
 
-    scratch = Path(__file__).resolve().parents[2] / "tmp"
+    scratch = SCRATCH
     report_path = report_path.resolve(strict=True)
     root = root.resolve(strict=True)
     source = (report_path.parent / "collection.anki2").resolve(strict=True)

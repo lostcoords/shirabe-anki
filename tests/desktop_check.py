@@ -66,6 +66,8 @@ def fixture_api():
             if path == "/api/v1/me":
                 self.respond({"credential": {"scopes": ["user:account:read", "user:dictionary:read", "user:study:read"]},
                               "preferences": {"uiLocale": "en"}})
+            elif path == "/api/v1/preferences":
+                self.respond({"preferences": {"uiLocale": "en"}})
             elif path == "/api/v1/dictionary-stack":
                 self.respond({"dictionaryStack": {"fingerprint": "phase0-fixture", "sources": [
                     {"dictionary": "jmdict", "languages": ["en"], "reveal": "show"},
@@ -210,10 +212,6 @@ class Driver:
 
     def popup(self):
         return self.js("Array.from(document.querySelectorAll('*')).flatMap(e=>e.shadowRoot?[...e.shadowRoot.querySelectorAll('.sb-popup')].map(p=>({text:p.innerText,visible:p.classList.contains('sb-visible')&&getComputedStyle(p).visibility==='visible'})):[])")
-
-    def popup_button(self, text):
-        source = """(() => { for(const e of document.querySelectorAll('*')) { if(!e.shadowRoot)continue; for(const b of e.shadowRoot.querySelectorAll('button')) { if(b.textContent.trim()===LABEL){b.click();return true;} } } return false; })()"""
-        self.check("clicked_" + text.replace(" ", "_"), self.js(source.replace("LABEL", json.dumps(text))))
 
     def modal_tick(self):
         from aqt.qt import QCheckBox, QDialogButtonBox, QMessageBox
@@ -381,52 +379,7 @@ class Driver:
         self.screenshot("desktop-offline-popup")
         self.report["offline_popup"] = self.popup()
         self.check("offline_definition_no_api_requests", not self.requests)
-
-        before = self.mw.col.get_note(prepared["id"])
-        original = before.fields[:]
-        cards = self.mw.col.db.all("select * from cards where nid=? order by id", before.id)
-        revlog = self.mw.col.db.all("select * from revlog order by id")
-        self.modal_action = "desktop-update-preview"
-        self.popup_button("Update this note")
-        self.wait(lambda: self.mw.col.get_note(before.id)["Reading"] == "ねこ", "native update applied")
-        self.check("native_update_preserves_existing_back", self.mw.col.get_note(before.id)["Back"] == "犬")
-        self.check("native_update_preserves_cards", cards == self.mw.col.db.all("select * from cards where nid=? order by id", before.id))
-        self.check("native_update_preserves_revlog", revlog == self.mw.col.db.all("select * from revlog order by id"))
-        self.report["native_update_undo_label"] = self.mw.col.undo_status().undo
-        self.check("native_update_has_named_undo", self.mw.col.undo_status().undo == "Shirabe: enrich notes")
-        self.mw.onUndo()
-        self.wait(lambda: self.mw.col.get_note(before.id).fields == original, "native menu undo restored fields")
-        self.check("native_menu_undo_restores_fields", self.mw.col.get_note(before.id).fields == original)
-
-        self.show("prepared")
-        self.click_word()
-        count = self.mw.col.note_count()
-        self.modal_action = "desktop-add-preview"
-        self.popup_button("Add Anki note")
-        add = self.wait(lambda: next((w for w in self.app.topLevelWidgets() if type(w).__name__ == "AddCards" and w.isVisible()), None), "native Add window")
-        self.wait(lambda: add.editor.note is not None and add.editor.note["Front"] == "猫", "native Add draft populated")
-        self.settle()
-        self.screenshot("desktop-add-draft", add)
-        self.report["native_add_draft"] = dict(zip(add.editor.note.keys(), add.editor.note.fields))
-        self.check("native_add_is_draft_until_saved", self.mw.col.note_count() == count)
-        add.addButton.click()
-        self.wait(lambda: self.mw.col.note_count() == count + 1, "native Add saved note")
-        self.report["native_added_notes"] = list(self.mw.col.find_notes("tag:phase0_authored"))
-        self.check("native_add_saved_one_note", len(self.report["native_added_notes"]) == 1)
-        self.settle()
-        add.close()
-        self.settle()
-
-        self.show("prepared")
-        self.click_word()
-        self.popup_button("Find in Anki")
-        browser = self.wait(lambda: next((w for w in self.app.topLevelWidgets() if type(w).__name__ == "Browser" and w.isVisible()), None), "native Browser opened")
-        self.settle()
-        self.screenshot("desktop-find-existing", browser)
-        self.report["native_browser_query"] = browser.form.searchEdit.lineEdit().text()
-        self.check("native_find_searches_saved_note", "nid:" in self.report["native_browser_query"] and str(self.report["native_added_notes"][0]) in self.report["native_browser_query"])
-        browser.close()
-        self.settle()
+        self.check("popup_has_no_field_chooser", all("Copy and choose fields" not in p["text"] and "Add Anki note" not in p["text"] for p in self.report["offline_popup"]))
 
         self.show("basic")
         self.settle(1)

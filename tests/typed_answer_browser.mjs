@@ -1,7 +1,10 @@
+import { pathToFileURL } from "node:url";
+import { resolve as resolveCheckout } from "node:path";
+const shirabe = resolveCheckout(process.env.SHIRABE_PATH ?? new URL("../../shirabe", import.meta.url).pathname);
 import { readFile, writeFile } from "node:fs/promises"
 import { resolve } from "node:path"
 import { chromium } from "playwright"
-import { CardRuntime } from "../../packages/study-runtime/dist/runtime.mjs"
+const { CardRuntime } = await import(pathToFileURL(resolveCheckout(shirabe, "packages/study-runtime/dist/runtime.mjs")))
 
 const root = resolve(process.argv[2])
 const corpus = JSON.parse(await readFile(resolve(root, "expected.json"), "utf8"))

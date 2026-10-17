@@ -1,8 +1,11 @@
+import { pathToFileURL } from "node:url";
+import { resolve as resolveCheckout } from "node:path";
+const shirabe = resolveCheckout(process.env.SHIRABE_PATH ?? new URL("../../shirabe", import.meta.url).pathname);
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { expect } from "@playwright/test";
-import { browserEngines, launchBrowser } from "../../packages/study-runtime/test/browsers.mjs";
+const { browserEngines, launchBrowser } = await import(pathToFileURL(resolveCheckout(shirabe, "packages/study-runtime/test/browsers.mjs")));
 
 const input = [];
 for await (const chunk of process.stdin) input.push(chunk);
