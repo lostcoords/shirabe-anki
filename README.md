@@ -244,3 +244,5 @@ For SDK development, run `npm run sdk:link` to link `../shirabe-sdk`, then
 ## Template runtime
 
 `addon/` contains the Python add-on and phone integration. `packages/template-runtime/` contains the isolated Anki JavaScript runtime used by Shirabe's web renderer. The runtime is released independently as `@shirabe-org/anki-runtime`; it is not included in the `.ankiaddon` archive. See [runtime development and release commands](packages/template-runtime/README.md).
+
+For a saved profile report, run `node script/study_runtime_profile.mjs PROFILE_REPORT.json OUTPUT.json` after building. This checks imported script execution without opening the original Anki profile. It does not exercise browser layout or the Rails reviewer.
