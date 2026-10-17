@@ -9,7 +9,7 @@
   },
   "dependencies": {
     "@jitl/quickjs-singlefile-browser-release-sync": "0.32.0",
-    "dompurify": "3.4.16",
+    "dompurify": "3.4.17",
     "jquery": "3.7.1",
     "linkedom": "0.18.13",
     "quickjs-emscripten-core": "0.32.0"
@@ -17,7 +17,7 @@
   "devDependencies": {
     "esbuild": "0.28.2"
   },
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Isolated execution and browser compatibility for Anki card templates.",
   "license": "GPL-3.0-only",
   "repository": {
