@@ -1,4 +1,4 @@
-name: Release Anki runtime
+name: Verify Anki runtime release
 
 on:
   workflow_dispatch:
@@ -9,7 +9,7 @@ on:
         type: string
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   release:
@@ -34,7 +34,18 @@ jobs:
       - run: npm run test:runtime:browser
       - run: mkdir -p artifacts && npm run package:runtime
       - run: node script/verify-runtime-package.mjs artifacts/*.tgz
-      - name: Publish the verified archive
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: gh release create "anki-runtime-v$RELEASE_VERSION" artifacts/*.tgz --target "$GITHUB_SHA" --title "Anki runtime $RELEASE_VERSION" --notes "Standalone Anki template runtime and matching web assets. The Python add-on is packaged separately."
+      - name: Record release provenance
+        run: |
+          node --input-type=module - <<'JS'
+          import { readFileSync, writeFileSync } from "node:fs";
+          import { createHash } from "node:crypto";
+          const version = process.env.RELEASE_VERSION;
+          const archive = `shirabe-org-anki-runtime-${version}.tgz`;
+          const sha256 = createHash("sha256").update(readFileSync(`artifacts/${archive}`)).digest("hex");
+          writeFileSync("artifacts/runtime-release.json", JSON.stringify({ version, sourceRevision: process.env.GITHUB_SHA, archive, sha256 }, null, 2) + "\n");
+          JS
+      - uses: actions/upload-artifact@v6
+        with:
+          name: anki-runtime-${{ inputs.version }}
+          path: artifacts/*
+          if-no-files-found: error
